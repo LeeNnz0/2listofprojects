@@ -1738,8 +1738,180 @@
             }, 3000);
         }
 
+        function generateReport() {
+            if (dispatchRecords.length === 0) {
+                alert('No dispatch records found. Please add some records first.');
+                return;
+            }
+
+            // Calculate totals
+            let grandTotal = 0;
+            let denjoTotal = 0;
+            let subconTotal = 0;
+            let totalTrips = dispatchRecords.length;
+            let denjoTrips = 0;
+            let subconTrips = 0;
+
+            dispatchRecords.forEach(record => {
+                grandTotal += record.rate;
+                if (record.truckType === 'denjo') {
+                    denjoTotal += record.rate;
+                    denjoTrips++;
+                } else {
+                    subconTotal += record.rate;
+                    subconTrips++;
+                }
+            });
+
+            // Get date range
+            const dates = dispatchRecords.map(r => new Date(r.date)).sort((a, b) => a - b);
+            const startDate = dates[0].toLocaleDateString('en-PH');
+            const endDate = dates[dates.length - 1].toLocaleDateString('en-PH');
+
+            // Create report content
+            const reportContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #333; padding-bottom: 20px;">
+                        <h1 style="color: #333; margin: 0; font-size: 28px;">🚛 TRUCK DISPATCH REPORT</h1>
+                        <p style="color: #666; margin: 10px 0 0 0; font-size: 16px;">Generated on ${new Date().toLocaleDateString('en-PH')} at ${new Date().toLocaleTimeString('en-PH')}</p>
+                        <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Report Period: ${startDate} - ${endDate}</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h3 style="margin: 0 0 10px 0; font-size: 16px;">GRAND TOTAL</h3>
+                            <p style="margin: 0; font-size: 24px; font-weight: bold;">₱${grandTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${totalTrips} total trips</p>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h3 style="margin: 0 0 10px 0; font-size: 16px;">DENJO TOTAL</h3>
+                            <p style="margin: 0; font-size: 24px; font-weight: bold;">₱${denjoTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${denjoTrips} trips</p>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                            <h3 style="margin: 0 0 10px 0; font-size: 16px;">SUBCON TOTAL</h3>
+                            <p style="margin: 0; font-size: 24px; font-weight: bold;">₱${subconTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${subconTrips} trips</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <h2 style="color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px;">📊 SITE BREAKDOWN</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 20px;">
+                            ${Object.entries(siteTotals).map(([siteKey, data]) => `
+                                <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
+                                    <h4 style="margin: 0 0 5px 0; color: #333; font-size: 14px;">${data.location}</h4>
+                                    <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">${data.site}</h3>
+                                    ${data.denjoCount > 0 ? `
+                                        <div style="background: #dbeafe; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                            <div style="display: flex; justify-between; align-items: center;">
+                                                <span style="font-weight: bold; color: #1e40af;">DENJO:</span>
+                                                <span style="font-weight: bold; color: #1e40af;">₱${data.denjoTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: #1e40af;">${data.denjoCount} trips</div>
+                                        </div>
+                                    ` : ''}
+                                    ${data.subconCount > 0 ? `
+                                        <div style="background: #dcfce7; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                            <div style="display: flex; justify-between; align-items: center;">
+                                                <span style="font-weight: bold; color: #166534;">SUBCON:</span>
+                                                <span style="font-weight: bold; color: #166534;">₱${data.subconTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: #166534;">${data.subconCount} trips</div>
+                                        </div>
+                                    ` : ''}
+                                    <div style="border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px;">
+                                        <div style="display: flex; justify-between; align-items: center;">
+                                            <span style="font-weight: bold; color: #7c3aed;">SITE TOTAL:</span>
+                                            <span style="font-weight: bold; color: #7c3aed; font-size: 18px;">₱${data.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: #666;">${data.count} total trips</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <h2 style="color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px;">📋 DETAILED RECORDS</h2>
+                        <div style="overflow-x: auto; margin-top: 20px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #f3f4f6;">
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Date</th>
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Type</th>
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Plate</th>
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Location</th>
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Site</th>
+                                        <th style="border: 1px solid #d1d5db; padding: 8px; text-align: right;">Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dispatchRecords.sort((a, b) => new Date(b.date) - new Date(a.date)).map(record => `
+                                        <tr>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px;">${new Date(record.date).toLocaleDateString('en-PH')}</td>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px;">
+                                                <span style="padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; color: white; background: ${record.truckType === 'denjo' ? '#3b82f6' : '#10b981'};">
+                                                    ${record.truckType.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px; font-weight: bold;">${record.plateNumber}</td>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px;">${record.location}</td>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px;">${record.site}</td>
+                                            <td style="border: 1px solid #d1d5db; padding: 8px; text-align: right; font-weight: bold; color: #059669;">₱${record.rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; color: #666; font-size: 12px;">
+                        <p>This report was generated automatically by the Truck Dispatch System</p>
+                        <p>Total Records: ${dispatchRecords.length} | Report Generated: ${new Date().toLocaleString('en-PH')}</p>
+                    </div>
+                </div>
+            `;
+
+            // Open report in new window
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Truck Dispatch Report - ${new Date().toLocaleDateString('en-PH')}</title>
+                    <style>
+                        body { margin: 0; padding: 20px; background: #f5f5f5; }
+                        @media print {
+                            body { background: white; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+                        <button onclick="window.print()" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">🖨️ Print Report</button>
+                        <button onclick="window.close()" style="background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">✕ Close</button>
+                    </div>
+                    ${reportContent}
+                </body>
+                </html>
+            `);
+            reportWindow.document.close();
+
+            // Show success message
+            const message = document.createElement('div');
+            message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            message.textContent = '📊 Report generated successfully! Check the new window.';
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee8c36b7d1b42b',t:'MTc1NzgzODg5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee9543f0edb42b',t:'MTc1NzgzOTI2My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
