@@ -445,13 +445,18 @@
 
         function selectTruckType(type) {
             selectedTruckType = type;
-            // Don't reset selectedPlates if they were auto-selected from search
-            if (!document.getElementById('plateSearch').value) {
+            // Only reset selectedPlates if manually selecting truck type (not from auto-detection)
+            const isAutoDetection = arguments[1]; // Second parameter to indicate auto-detection
+            if (!isAutoDetection && !document.getElementById('plateSearch').value) {
                 selectedPlates = [];
                 updateSelectedPlatesDisplay();
             }
-            selectedLocation = '';
-            selectedSite = '';
+            
+            // Only reset location/site if manually selecting truck type
+            if (!isAutoDetection) {
+                selectedLocation = '';
+                selectedSite = '';
+            }
             
             // Update button styles
             document.getElementById('denjoBtn').className = type === 'denjo' ? 
@@ -472,8 +477,10 @@
                 `<button class="p-3 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium" onclick="selectLocation('${location}')">${location}</button>`
             ).join('');
             
-            // Hide site section initially
-            document.getElementById('siteSection').classList.add('hidden');
+            // Hide site section initially only if manually selecting
+            if (!isAutoDetection) {
+                document.getElementById('siteSection').classList.add('hidden');
+            }
             
             updateRate();
         }
@@ -548,13 +555,13 @@
             if (denjoMatches.length > 0 && subconMatches.length === 0) {
                 // Only Denjo matches found
                 if (selectedTruckType !== 'denjo') {
-                    selectTruckType('denjo');
+                    selectTruckType('denjo', true); // true indicates auto-detection
                 }
                 renderPlateButtons(denjoMatches);
             } else if (subconMatches.length > 0 && denjoMatches.length === 0) {
                 // Only Subcon matches found
                 if (selectedTruckType !== 'subcon') {
-                    selectTruckType('subcon');
+                    selectTruckType('subcon', true); // true indicates auto-detection
                 }
                 renderPlateButtons(subconMatches);
             } else {
@@ -588,23 +595,40 @@
         function selectPlateWithType(plate, truckType) {
             // Auto-select truck type if not already selected or if different
             if (selectedTruckType !== truckType) {
-                selectTruckType(truckType);
+                selectTruckType(truckType, true); // true indicates auto-detection
+                // Wait for selectTruckType to complete before continuing
+                setTimeout(() => {
+                    // Add plate to selection
+                    if (!selectedPlates.includes(plate)) {
+                        selectedPlates.push(plate);
+                    }
+                    
+                    // Clear search input after selecting a plate
+                    document.getElementById('plateSearch').value = '';
+                    
+                    // Reset plate buttons to show all available plates for current truck type
+                    renderPlateButtons();
+                    
+                    // Update displays
+                    updateSelectedPlatesDisplay();
+                    updateRate();
+                }, 100);
+            } else {
+                // Add plate to selection
+                if (!selectedPlates.includes(plate)) {
+                    selectedPlates.push(plate);
+                }
+                
+                // Clear search input after selecting a plate
+                document.getElementById('plateSearch').value = '';
+                
+                // Reset plate buttons to show all available plates for current truck type
+                renderPlateButtons();
+                
+                // Update displays
+                updateSelectedPlatesDisplay();
+                updateRate();
             }
-            
-            // Add plate to selection
-            if (!selectedPlates.includes(plate)) {
-                selectedPlates.push(plate);
-            }
-            
-            // Clear search input after selecting a plate
-            document.getElementById('plateSearch').value = '';
-            
-            // Reset plate buttons to show all available plates for current truck type
-            renderPlateButtons();
-            
-            // Update displays
-            updateSelectedPlatesDisplay();
-            updateRate();
         }
 
         function updateSelectedPlatesDisplay() {
@@ -677,33 +701,75 @@
         }
 
         function updateRate() {
-            if (!selectedTruckType || !selectedLocation || selectedPlates.length === 0) {
+            if (!selectedLocation || selectedPlates.length === 0) {
                 currentRateDiv.textContent = '₱0.00';
                 addDispatchBtn.disabled = true;
                 return;
             }
 
-            const rates = selectedTruckType === 'denjo' ? denjoRates : subconRates;
-            const rate = rates[selectedLocation] || 0;
-            const totalRate = rate * selectedPlates.length;
+            // Calculate total rate based on each plate's actual truck type
+            let totalRate = 0;
+            let rateBreakdown = [];
             
-            currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${selectedPlates.length} plates × ₱${rate.toLocaleString('en-PH', {minimumFractionDigits: 2})})`;
+            selectedPlates.forEach(plate => {
+                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                const rate = rates[selectedLocation] || 0;
+                totalRate += rate;
+                
+                // Group by rate for display
+                const existingRate = rateBreakdown.find(r => r.rate === rate && r.type === truckType);
+                if (existingRate) {
+                    existingRate.count++;
+                } else {
+                    rateBreakdown.push({ rate, count: 1, type: truckType });
+                }
+            });
+            
+            // Create breakdown text
+            const breakdownText = rateBreakdown.map(r => 
+                `${r.count} ${r.type.toUpperCase()} × ₱${r.rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}`
+            ).join(' + ');
+            
+            currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${breakdownText})`;
             
             // Enable add button if all fields are filled
             const allFieldsFilled = selectedPlates.length > 0 && selectedLocation && selectedSite && dispatchDateInput.value;
             addDispatchBtn.disabled = !allFieldsFilled;
+            
+            console.log('Update Rate Debug:', {
+                selectedPlates: selectedPlates,
+                selectedLocation: selectedLocation,
+                selectedSite: selectedSite,
+                dateValue: dispatchDateInput.value,
+                allFieldsFilled: allFieldsFilled,
+                buttonDisabled: addDispatchBtn.disabled
+            });
         }
 
         function addDispatchRecord() {
-            const rate = selectedTruckType === 'denjo' ? 
-                      denjoRates[selectedLocation] : 
-                      subconRates[selectedLocation];
-
-            // Create a record for each selected plate
+            console.log('Add Dispatch Debug:', {
+                selectedPlates: selectedPlates,
+                selectedLocation: selectedLocation,
+                selectedSite: selectedSite,
+                dateValue: dispatchDateInput.value
+            });
+            
+            if (selectedPlates.length === 0 || !selectedLocation || !selectedSite || !dispatchDateInput.value) {
+                alert('Please fill in all fields before adding dispatch record.');
+                return;
+            }
+            
+            // Create a record for each selected plate with auto-detected truck type
             selectedPlates.forEach(plate => {
+                // Auto-detect truck type based on plate registration
+                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                const rate = rates[selectedLocation];
+                
                 const record = {
                     id: Date.now() + Math.random(), // Ensure unique IDs
-                    truckType: selectedTruckType,
+                    truckType: truckType, // Auto-detected based on plate
                     plateNumber: plate,
                     location: selectedLocation,
                     site: selectedSite,
@@ -711,6 +777,7 @@
                     rate: rate
                 };
                 dispatchRecords.push(record);
+                console.log('Added record:', record);
             });
 
             saveData(); // Save to localStorage
@@ -946,35 +1013,77 @@
                 `${record.location} - ${record.site}` === siteKey
             );
             
-            // Count plates
+            // Count plates and separate by truck type
             const plateCounts = {};
             siteRecords.forEach(record => {
-                if (!plateCounts[record.plateNumber]) {
-                    plateCounts[record.plateNumber] = {
+                // Use the actual truck type from the record, not from plate detection
+                const key = `${record.plateNumber}_${record.truckType}`;
+                if (!plateCounts[key]) {
+                    plateCounts[key] = {
+                        plateNumber: record.plateNumber,
                         count: 0,
-                        truckType: record.truckType,
+                        truckType: record.truckType, // This comes from the actual dispatch record
                         total: 0
                     };
                 }
-                plateCounts[record.plateNumber].count += 1;
-                plateCounts[record.plateNumber].total += record.rate;
+                plateCounts[key].count += 1;
+                plateCounts[key].total += record.rate;
             });
             
-            // Create modal content
-            const plateDetails = Object.entries(plateCounts)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([plate, info]) => `
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div class="flex items-center gap-3">
-                            <span class="font-bold text-lg">${plate}</span>
-                            <span class="px-2 py-1 text-xs rounded-full ${info.truckType === 'denjo' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${info.truckType.toUpperCase()}</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-bold text-lg text-green-600">₱${info.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
-                            <div class="text-sm text-gray-600">${info.count} trips</div>
+            // Separate plates by truck type for better organization
+            const denjoPlateEntries = Object.entries(plateCounts).filter(([key, info]) => info.truckType === 'denjo').sort(([a], [b]) => a.localeCompare(b));
+            const subconPlateEntries = Object.entries(plateCounts).filter(([key, info]) => info.truckType === 'subcon').sort(([a], [b]) => a.localeCompare(b));
+            
+            // Create modal content with sections for each truck type
+            let plateDetails = '';
+            
+            if (denjoPlateEntries.length > 0) {
+                plateDetails += `
+                    <div class="mb-6">
+                        <h5 class="text-md font-bold text-blue-700 mb-3 flex items-center gap-2">
+                            🚛 DENJO TRUCKS (${denjoPlateEntries.length} plates)
+                        </h5>
+                        <div class="space-y-2">
+                            ${denjoPlateEntries.map(([key, info]) => `
+                                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold text-lg text-blue-800">${info.plateNumber}</span>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">DENJO</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg text-green-600">₱${info.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                                        <div class="text-sm text-gray-600">${info.count} trips</div>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                `).join('');
+                `;
+            }
+            
+            if (subconPlateEntries.length > 0) {
+                plateDetails += `
+                    <div class="mb-6">
+                        <h5 class="text-md font-bold text-green-700 mb-3 flex items-center gap-2">
+                            🚚 SUBCON TRUCKS (${subconPlateEntries.length} plates)
+                        </h5>
+                        <div class="space-y-2">
+                            ${subconPlateEntries.map(([key, info]) => `
+                                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-bold text-lg text-green-800">${info.plateNumber}</span>
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">SUBCON</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg text-green-600">₱${info.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                                        <div class="text-sm text-gray-600">${info.count} trips</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
             
             // Create and show modal
             const modal = document.createElement('div');
@@ -1000,7 +1109,7 @@
                                 <span class="text-lg font-bold text-gray-700">SITE TOTAL:</span>
                                 <span class="text-2xl font-bold text-purple-600">₱${data.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
                             </div>
-                            <div class="text-sm text-gray-600 mt-1">${data.count} total trips • ${Object.keys(plateCounts).length} different plates</div>
+                            <div class="text-sm text-gray-600 mt-1">${data.count} total trips • ${Object.values(plateCounts).length} plate entries</div>
                         </div>
                     </div>
                 </div>
@@ -1452,24 +1561,28 @@
         }
 
         function updateMultiPreview() {
-            if (!multiSelectedTruckType || multiSelectedPlates.length === 0 || multiSelectedSites.length === 0) {
+            if (multiSelectedPlates.length === 0 || multiSelectedSites.length === 0) {
                 multiRecordCountDiv.textContent = '0 records';
                 multiTotalAmountDiv.textContent = '₱0.00';
                 addMultiDispatchBtn.disabled = true;
                 return;
             }
 
-            const rates = multiSelectedTruckType === 'denjo' ? denjoRates : subconRates;
-            
-            // Calculate total records and amount across all locations
+            // Calculate total records and amount across all locations with auto-detected truck types
             let totalRecords = 0;
             let totalAmount = 0;
             
-            Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
-                const locationRate = rates[location] || 0;
-                const locationRecords = multiSelectedPlates.length * sites.length;
-                totalRecords += locationRecords;
-                totalAmount += locationRecords * locationRate;
+            multiSelectedPlates.forEach(plate => {
+                // Auto-detect truck type for each plate
+                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                
+                Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
+                    const locationRate = rates[location] || 0;
+                    const plateRecordsForLocation = sites.length;
+                    totalRecords += plateRecordsForLocation;
+                    totalAmount += plateRecordsForLocation * locationRate;
+                });
             });
             
             multiRecordCountDiv.textContent = `${totalRecords} records`;
@@ -1481,15 +1594,17 @@
         }
 
         function addMultiDispatchRecord() {
-            const rates = multiSelectedTruckType === 'denjo' ? denjoRates : subconRates;
-
             // Create a record for each combination of plate and site (across all locations)
             multiSelectedPlates.forEach(plate => {
+                // Auto-detect truck type based on plate registration
+                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                
                 Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
                     sites.forEach(siteObj => {
                         const record = {
                             id: Date.now() + Math.random(),
-                            truckType: multiSelectedTruckType,
+                            truckType: truckType, // Auto-detected based on plate
                             plateNumber: plate,
                             location: location,
                             site: siteObj.site,
@@ -1557,5 +1672,5 @@
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee5747a0e906ff',t:'MTc1NzgzNjcyNS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee6ab266a106ff',t:'MTc1NzgzNzUyMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
