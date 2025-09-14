@@ -82,9 +82,44 @@
                 </div>
             </div>
             
-            <button id="addDispatch" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                Add Dispatch Entry
-            </button>
+            <div class="space-y-3">
+                <button id="addDispatch" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    Add Dispatch Entry
+                </button>
+                
+                <!-- Data Recovery Section -->
+                <div class="flex gap-2">
+                    <button onclick="exportData()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
+                        💾 Export Data
+                    </button>
+                    <button onclick="importData()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
+                        📂 Import Data
+                    </button>
+                    <button onclick="showDataStatus()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
+                        📊 Data Status
+                    </button>
+                </div>
+                
+                <!-- Add Custom Plate Section -->
+                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h3 class="text-lg font-bold text-yellow-800 mb-3">🚛 Add Custom Plate Number</h3>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="customPlateInput" placeholder="Enter new plate number (e.g., ABC 1234)" 
+                               class="flex-1 p-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+                               onkeypress="handleCustomPlateEnter(event)">
+                        <select id="customPlateType" class="p-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm">
+                            <option value="">Select Type</option>
+                            <option value="denjo">🚛 Denjo Truck</option>
+                            <option value="subcon">🚚 Subcon Truck</option>
+                        </select>
+                        <button onclick="addCustomPlate()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
+                            ➕ Add
+                        </button>
+                    </div>
+                    <div class="text-xs text-yellow-700">💡 Add new plate numbers that aren't in the system yet. They'll be saved permanently!</div>
+                </div>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+            </div>
         </div>
         
         <!-- Multi-Site Dispatch Section -->
@@ -194,22 +229,30 @@
     </div>
 
     <script>
-        // Data
-        const denjoPlates = [
+        // Data - Base plates (original system plates)
+        const baseDenjoPlates = [
             'AAV 3315', 'ABD 2336', 'CAE 8359', 'MAK 4606', 'MAL 7663', 'NAJ 6390', 
             'NAM 7981', 'NAM 7982', 'NAX 5523', 'NAZ 1509', 'NBA 1561', 'NBA 1570', 
             'NBA 1573', 'NBA 1574', 'NDH 2626', 'NDM 3414', 'NDM 4083', 'NFZ 2650', 
             'NFZ 2658', 'NGB 1550', 'NIF 1814', 'NKF 1653', 'NKF 1663'
-        ].sort();
+        ];
 
-        const subconPlates = [
+        const baseSubconPlates = [
             'ABH 293', 'ALA 7244', 'CAG 1899', 'CBP 881', 'KAS 6089', 'KAT 4965',
             'MBF 6760', 'MBI 5795', 'MV 2253', 'MV 3160', 'NCK 6502', 'NES 3903', 'NES 7099', 
             'NES 9440', 'NFO 1978', 'NFQ 1221', 'NFV 8013', 'NFX 7968', 'NGB 3188', 'NGF 1435', 
             'NGR 4654', 'NGL 9012', 'NID 4886', 'NII 253', 'NIK 7805', 'NKR 4609', 
             'NKR 4879', 'NKR 5126', 'NKR 5127', 'NKR 5128', 'NKR 5129', 'NKR 5130', 'NKR 5131', 'NQE 393', 'RFC 991', 
             'RGZ 134', 'RME 481', 'RMJ 498', 'RNE 172', 'WMZ 181'
-        ].sort();
+        ];
+
+        // Custom plates storage
+        let customDenjoPlates = [];
+        let customSubconPlates = [];
+
+        // Combined plates arrays (base + custom)
+        let denjoPlates = [];
+        let subconPlates = [];
 
         const denjoRates = {
             'ALABANG': 3928.57,
@@ -235,6 +278,7 @@
         const subconRates = {
             'ALABANG': 2000,
             'ARCA SOUTH/FTI': 1600,
+            'FTI/ARCA SOUTH': 1600,
             'ASEANA': 1900,
             'BBG': 1600,
             'BGC/TAGUIG': 1600,
@@ -245,6 +289,7 @@
             'MANILA': 2000,
             'NUVALI': 2300,
             'PARANAQUE': 1900,
+            'PASAY': 1700,
             'PASIG': 1700,
             'QC': 2000
         };
@@ -423,21 +468,186 @@
         const multiRecordCountDiv = document.getElementById('multiRecordCount');
         const multiTotalAmountDiv = document.getElementById('multiTotalAmount');
 
-        // Load data from localStorage on page load
-        function loadData() {
-            const savedRecords = localStorage.getItem('dispatchRecords');
-            if (savedRecords) {
-                dispatchRecords = JSON.parse(savedRecords);
-                updateSiteTotals();
-                renderDispatchRecords();
-                renderSiteTotals();
+        // Load custom plates from localStorage
+        function loadCustomPlates() {
+            try {
+                const savedDenjoPlates = localStorage.getItem('customDenjoPlates');
+                const savedSubconPlates = localStorage.getItem('customSubconPlates');
+                
+                if (savedDenjoPlates) {
+                    customDenjoPlates = JSON.parse(savedDenjoPlates);
+                    console.log('✅ Loaded', customDenjoPlates.length, 'custom Denjo plates');
+                }
+                
+                if (savedSubconPlates) {
+                    customSubconPlates = JSON.parse(savedSubconPlates);
+                    console.log('✅ Loaded', customSubconPlates.length, 'custom Subcon plates');
+                }
+                
+                // Update combined arrays
+                updatePlateArrays();
+                
+            } catch (error) {
+                console.error('❌ Error loading custom plates:', error);
+                customDenjoPlates = [];
+                customSubconPlates = [];
+                updatePlateArrays();
             }
         }
 
-        // Save data to localStorage
-        function saveData() {
-            localStorage.setItem('dispatchRecords', JSON.stringify(dispatchRecords));
+        // Update combined plate arrays
+        function updatePlateArrays() {
+            denjoPlates = [...baseDenjoPlates, ...customDenjoPlates].sort();
+            subconPlates = [...baseSubconPlates, ...customSubconPlates].sort();
+            console.log('📋 Updated plate arrays - Denjo:', denjoPlates.length, 'Subcon:', subconPlates.length);
         }
+
+        // Save custom plates to localStorage
+        function saveCustomPlates() {
+            try {
+                localStorage.setItem('customDenjoPlates', JSON.stringify(customDenjoPlates));
+                localStorage.setItem('customSubconPlates', JSON.stringify(customSubconPlates));
+                console.log('✅ Custom plates saved successfully');
+            } catch (error) {
+                console.error('❌ Error saving custom plates:', error);
+                showErrorMessage('Failed to save custom plates');
+            }
+        }
+
+        // Add custom plate function
+        function addCustomPlate() {
+            const plateInput = document.getElementById('customPlateInput');
+            const typeSelect = document.getElementById('customPlateType');
+            
+            const plateNumber = plateInput.value.trim().toUpperCase();
+            const plateType = typeSelect.value;
+            
+            // Validation
+            if (!plateNumber) {
+                showErrorMessage('Please enter a plate number');
+                return;
+            }
+            
+            if (!plateType) {
+                showErrorMessage('Please select truck type (Denjo or Subcon)');
+                return;
+            }
+            
+            // Check if plate already exists in any list
+            if (denjoPlates.includes(plateNumber) || subconPlates.includes(plateNumber)) {
+                showErrorMessage(`Plate "${plateNumber}" already exists in the system`);
+                return;
+            }
+            
+            // Add to appropriate custom array
+            if (plateType === 'denjo') {
+                customDenjoPlates.push(plateNumber);
+                showSuccessMessage(`Added "${plateNumber}" to Denjo trucks! 🚛`);
+            } else {
+                customSubconPlates.push(plateNumber);
+                showSuccessMessage(`Added "${plateNumber}" to Subcon trucks! 🚚`);
+            }
+            
+            // Update arrays and save
+            updatePlateArrays();
+            saveCustomPlates();
+            
+            // Clear inputs
+            plateInput.value = '';
+            typeSelect.value = '';
+            
+            // Update UI if needed
+            if (selectedTruckType) {
+                renderPlateButtons();
+            }
+            if (multiSelectedTruckType) {
+                renderMultiPlateButtons();
+            }
+        }
+
+        // Handle Enter key for custom plate input
+        function handleCustomPlateEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                addCustomPlate();
+            }
+        }
+
+        // Enhanced data loading with error handling
+        function loadData() {
+            try {
+                const savedRecords = localStorage.getItem('dispatchRecords');
+                if (savedRecords && savedRecords !== 'null' && savedRecords !== 'undefined') {
+                    const parsedRecords = JSON.parse(savedRecords);
+                    if (Array.isArray(parsedRecords)) {
+                        dispatchRecords = parsedRecords;
+                        console.log('✅ Loaded', dispatchRecords.length, 'records from localStorage');
+                        updateSiteTotals();
+                        renderDispatchRecords();
+                        renderSiteTotals();
+                    } else {
+                        console.log('⚠️ Invalid data format in localStorage, starting fresh');
+                        dispatchRecords = [];
+                    }
+                } else {
+                    console.log('📝 No saved data found, starting fresh');
+                    dispatchRecords = [];
+                }
+            } catch (error) {
+                console.error('❌ Error loading data:', error);
+                dispatchRecords = [];
+                // Try to backup corrupted data
+                const corruptedData = localStorage.getItem('dispatchRecords');
+                if (corruptedData) {
+                    localStorage.setItem('dispatchRecords_backup_' + Date.now(), corruptedData);
+                }
+            }
+        }
+
+        // Enhanced save with multiple backups and error handling
+        function saveData() {
+            try {
+                // Create backup before saving
+                const currentData = localStorage.getItem('dispatchRecords');
+                if (currentData && currentData !== 'null') {
+                    localStorage.setItem('dispatchRecords_backup', currentData);
+                }
+                
+                // Save main data
+                const dataToSave = JSON.stringify(dispatchRecords);
+                localStorage.setItem('dispatchRecords', dataToSave);
+                
+                // Verify save was successful
+                const savedData = localStorage.getItem('dispatchRecords');
+                if (savedData === dataToSave) {
+                    console.log('✅ Data saved successfully:', dispatchRecords.length, 'records');
+                } else {
+                    throw new Error('Data verification failed after save');
+                }
+            } catch (error) {
+                console.error('❌ Error saving data:', error);
+                // Try to restore from backup
+                const backupData = localStorage.getItem('dispatchRecords_backup');
+                if (backupData) {
+                    try {
+                        dispatchRecords = JSON.parse(backupData);
+                        console.log('🔄 Restored from backup');
+                    } catch (backupError) {
+                        console.error('❌ Backup restore failed:', backupError);
+                    }
+                }
+                
+                // Show error to user
+                showErrorMessage('Failed to save data. Please try again.');
+            }
+        }
+
+        // Auto-save every 30 seconds as additional protection
+        setInterval(() => {
+            if (dispatchRecords.length > 0) {
+                saveData();
+            }
+        }, 30000);
 
         // Set today's date as default
         dispatchDateInput.valueAsDate = new Date();
@@ -453,7 +663,32 @@
         });
 
         // Load saved data when page loads
+        loadCustomPlates(); // Load custom plates first
         loadData();
+
+        // Save data when page is about to be closed/refreshed
+        window.addEventListener('beforeunload', function(e) {
+            if (dispatchRecords.length > 0) {
+                saveData();
+                console.log('💾 Data saved before page unload');
+            }
+        });
+
+        // Save data when page becomes hidden (mobile/tab switching)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && dispatchRecords.length > 0) {
+                saveData();
+                console.log('💾 Data saved on visibility change');
+            }
+        });
+
+        // Save data when window loses focus
+        window.addEventListener('blur', function() {
+            if (dispatchRecords.length > 0) {
+                saveData();
+                console.log('💾 Data saved on window blur');
+            }
+        });
 
         function selectTruckType(type) {
             selectedTruckType = type;
@@ -479,15 +714,27 @@
                 'flex-1 p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
                 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
-            // Show location section and populate locations
+            // Show location section and populate ALL locations (both Denjo and Subcon)
             const locationSection = document.getElementById('locationSection');
             const locationButtons = document.getElementById('locationButtons');
             locationSection.classList.remove('hidden');
             
-            const rates = type === 'denjo' ? denjoRates : subconRates;
-            locationButtons.innerHTML = Object.keys(rates).map(location => 
-                `<button class="p-3 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium" onclick="selectLocation('${location}')">${location}</button>`
-            ).join('');
+            // Combine ALL locations from both Denjo and Subcon rates
+            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(subconRates)]);
+            const sortedLocations = Array.from(allLocations).sort();
+            
+            locationButtons.innerHTML = sortedLocations.map(location => {
+                // Check if this location has rates for the selected truck type
+                const rates = type === 'denjo' ? denjoRates : subconRates;
+                const hasRate = rates[location] !== undefined;
+                const buttonClass = hasRate ? 
+                    'p-3 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium' :
+                    'p-3 border border-red-300 bg-red-50 rounded-lg text-sm font-medium text-red-600 cursor-not-allowed opacity-60';
+                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase()})`;
+                const onClickAction = hasRate ? `onclick="selectLocation('${location}')"` : '';
+                
+                return `<button class="${buttonClass}" ${onClickAction}>${buttonText}</button>`;
+            }).join('');
             
             // Hide site section initially only if manually selecting
             if (!isAutoDetection) {
@@ -533,7 +780,9 @@
         }
 
         function filterPlates() {
-            const searchTerm = document.getElementById('plateSearch').value.toUpperCase();
+            const searchTerm = document.getElementById('plateSearch').value.toUpperCase().trim();
+            
+            console.log('Search term:', searchTerm);
             
             if (searchTerm.length === 0) {
                 // Reset everything if search is empty
@@ -546,20 +795,52 @@
                 return;
             }
             
-            // Search in both denjo and subcon plates regardless of selected truck type
-            const denjoMatches = denjoPlates.filter(plate => 
-                plate.toUpperCase().includes(searchTerm)
-            );
-            const subconMatches = subconPlates.filter(plate => 
-                plate.toUpperCase().includes(searchTerm)
-            );
+            // Enhanced search - multiple search methods for better accuracy
+            const denjoMatches = denjoPlates.filter(plate => {
+                const plateUpper = plate.toUpperCase().trim();
+                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
+                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
+                
+                return (
+                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
+                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
+                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
+                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
+                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
+                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
+                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
+                );
+            });
+            
+            const subconMatches = subconPlates.filter(plate => {
+                const plateUpper = plate.toUpperCase().trim();
+                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
+                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
+                
+                return (
+                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
+                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
+                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
+                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
+                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
+                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
+                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
+                );
+            });
+            
+            console.log('Denjo matches:', denjoMatches);
+            console.log('Subcon matches:', subconMatches);
             
             // Combine all matches and show them
             const allMatches = [...denjoMatches, ...subconMatches].sort();
             
             if (allMatches.length === 0) {
-                // No matches found
-                renderPlateButtons([]);
+                // No matches found - show helpful message
+                document.getElementById('plateButtons').innerHTML = `
+                    <div class="col-span-full text-center text-gray-500 py-4">
+                        <div>No plates found matching "${searchTerm}"</div>
+                        <div class="text-xs mt-2">💡 Try searching with just letters (e.g., "WMZ") or numbers (e.g., "181")</div>
+                    </div>`;
                 return;
             }
             
@@ -742,29 +1023,65 @@
             console.log('UpdateRate Debug - Field Check:', {
                 hasPlates: hasPlates,
                 platesCount: Object.keys(selectedPlates).length,
+                selectedPlates: selectedPlates,
                 hasLocation: hasLocation,
                 selectedLocation: selectedLocation,
                 hasSite: hasSite,
                 selectedSite: selectedSite,
                 hasDate: hasDate,
-                dateValue: dispatchDateInput.value
+                dateValue: dispatchDateInput.value,
+                selectedTruckType: selectedTruckType
             });
 
-            if (!hasLocation || !hasPlates) {
+            if (!hasPlates) {
                 currentRateDiv.textContent = '₱0.00';
                 addDispatchBtn.disabled = true;
-                console.log('UpdateRate: Disabled - Missing location or plates');
+                addDispatchBtn.textContent = 'Select plates first';
+                console.log('UpdateRate: Disabled - No plates selected');
+                return;
+            }
+
+            if (!hasLocation) {
+                currentRateDiv.textContent = '₱0.00';
+                addDispatchBtn.disabled = true;
+                addDispatchBtn.textContent = 'Select location first';
+                console.log('UpdateRate: Disabled - No location selected');
+                return;
+            }
+
+            if (!hasSite) {
+                currentRateDiv.textContent = '₱0.00';
+                addDispatchBtn.disabled = true;
+                addDispatchBtn.textContent = 'Select site first';
+                console.log('UpdateRate: Disabled - No site selected');
+                return;
+            }
+
+            if (!hasDate) {
+                currentRateDiv.textContent = '₱0.00';
+                addDispatchBtn.disabled = true;
+                addDispatchBtn.textContent = 'Select date first';
+                console.log('UpdateRate: Disabled - No date selected');
                 return;
             }
 
             // Calculate total rate based on each plate's actual truck type and quantity
             let totalRate = 0;
             let rateBreakdown = [];
+            let hasInvalidRates = false;
+            let invalidPlates = [];
             
             Object.entries(selectedPlates).forEach(([plate, quantity]) => {
                 const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
                 const rates = truckType === 'denjo' ? denjoRates : subconRates;
-                const rate = rates[selectedLocation] || 0;
+                const rate = rates[selectedLocation];
+                
+                if (!rate || rate <= 0) {
+                    hasInvalidRates = true;
+                    invalidPlates.push(`${plate} (${truckType.toUpperCase()})`);
+                    return; // Skip this plate in calculation
+                }
+                
                 const plateTotal = rate * quantity;
                 totalRate += plateTotal;
                 
@@ -778,87 +1095,137 @@
             });
             
             // Create breakdown text
-            const breakdownText = rateBreakdown.map(r => 
-                `${r.count} ${r.type.toUpperCase()} × ₱${r.rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}`
-            ).join(' + ');
+            if (hasInvalidRates) {
+                const validBreakdown = rateBreakdown.length > 0 ? 
+                    rateBreakdown.map(r => 
+                        `${r.count} ${r.type.toUpperCase()} × ₱${r.rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}`
+                    ).join(' + ') : '';
+                
+                const invalidText = `⚠️ No rates: ${invalidPlates.join(', ')}`;
+                currentRateDiv.innerHTML = `
+                    <div>₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} ${validBreakdown ? `(${validBreakdown})` : ''}</div>
+                    <div class="text-xs text-red-600 mt-1">${invalidText}</div>
+                `;
+            } else {
+                const breakdownText = rateBreakdown.map(r => 
+                    `${r.count} ${r.type.toUpperCase()} × ₱${r.rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}`
+                ).join(' + ');
+                
+                currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${breakdownText})`;
+            }
             
-            currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${breakdownText})`;
-            
-            // Enable add button ONLY if ALL fields are properly filled
-            const allFieldsFilled = hasPlates && hasLocation && hasSite && hasDate;
+            // Enable add button ONLY if ALL fields are properly filled AND no invalid rates
+            const allFieldsFilled = hasPlates && hasLocation && hasSite && hasDate && !hasInvalidRates;
             addDispatchBtn.disabled = !allFieldsFilled;
+            
+            if (hasInvalidRates) {
+                addDispatchBtn.textContent = `Cannot add - No rates for selected location`;
+            } else if (allFieldsFilled) {
+                addDispatchBtn.textContent = 'Add Dispatch Entry';
+            }
             
             console.log('UpdateRate Final:', {
                 allFieldsFilled: allFieldsFilled,
                 buttonDisabled: addDispatchBtn.disabled,
-                totalRate: totalRate
+                totalRate: totalRate,
+                breakdown: rateBreakdown
             });
         }
 
         function addDispatchRecord() {
-            // Double-check all fields before proceeding
-            const hasPlates = Object.keys(selectedPlates).length > 0;
-            const hasLocation = selectedLocation && selectedLocation.trim() !== '';
-            const hasSite = selectedSite && selectedSite.trim() !== '';
-            const hasDate = dispatchDateInput.value && dispatchDateInput.value.trim() !== '';
-            
-            console.log('Add Dispatch Debug - Final Check:', {
-                hasPlates: hasPlates,
-                selectedPlates: selectedPlates,
-                hasLocation: hasLocation,
-                selectedLocation: selectedLocation,
-                hasSite: hasSite,
-                selectedSite: selectedSite,
-                hasDate: hasDate,
-                dateValue: dispatchDateInput.value,
-                buttonDisabled: addDispatchBtn.disabled
-            });
-            
-            if (!hasPlates || !hasLocation || !hasSite || !hasDate) {
-                alert('Please fill in all fields before adding dispatch record.\n\n' +
-                      `Plates: ${hasPlates ? '✓' : '✗'}\n` +
-                      `Location: ${hasLocation ? '✓' : '✗'}\n` +
-                      `Site: ${hasSite ? '✓' : '✗'}\n` +
-                      `Date: ${hasDate ? '✓' : '✗'}`);
+            // Prevent double-clicking
+            if (addDispatchBtn.disabled) {
+                console.log('❌ Button is disabled, preventing duplicate submission');
                 return;
             }
             
-            let totalRecordsAdded = 0;
+            // Temporarily disable button to prevent double-clicks
+            addDispatchBtn.disabled = true;
+            addDispatchBtn.textContent = 'Adding...';
             
-            // Create records for each selected plate based on quantity
-            Object.entries(selectedPlates).forEach(([plate, quantity]) => {
-                // Auto-detect truck type based on plate registration
-                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                const rates = truckType === 'denjo' ? denjoRates : subconRates;
-                const rate = rates[selectedLocation];
+            try {
+                // Double-check all fields before proceeding
+                const hasPlates = Object.keys(selectedPlates).length > 0;
+                const hasLocation = selectedLocation && selectedLocation.trim() !== '';
+                const hasSite = selectedSite && selectedSite.trim() !== '';
+                const hasDate = dispatchDateInput.value && dispatchDateInput.value.trim() !== '';
                 
-                // Create multiple records based on quantity
-                for (let i = 0; i < quantity; i++) {
-                    const record = {
-                        id: Date.now() + Math.random() + i, // Ensure unique IDs
-                        truckType: truckType, // Auto-detected based on plate
-                        plateNumber: plate,
-                        location: selectedLocation,
-                        site: selectedSite,
-                        date: dispatchDateInput.value,
-                        rate: rate
-                    };
-                    dispatchRecords.push(record);
-                    totalRecordsAdded++;
-                    console.log('Added record:', record);
+                console.log('Add Dispatch Debug - Final Check:', {
+                    hasPlates: hasPlates,
+                    selectedPlates: selectedPlates,
+                    hasLocation: hasLocation,
+                    selectedLocation: selectedLocation,
+                    hasSite: hasSite,
+                    selectedSite: selectedSite,
+                    hasDate: hasDate,
+                    dateValue: dispatchDateInput.value
+                });
+                
+                if (!hasPlates || !hasLocation || !hasSite || !hasDate) {
+                    const missingFields = [];
+                    if (!hasPlates) missingFields.push('Plates');
+                    if (!hasLocation) missingFields.push('Location');
+                    if (!hasSite) missingFields.push('Site');
+                    if (!hasDate) missingFields.push('Date');
+                    
+                    showErrorMessage(`Missing required fields: ${missingFields.join(', ')}`);
+                    updateRate(); // This will re-enable the button with proper text
+                    return;
                 }
-            });
+                
+                let totalRecordsAdded = 0;
+                const recordsToAdd = [];
+                
+                // Create records for each selected plate based on quantity
+                Object.entries(selectedPlates).forEach(([plate, quantity]) => {
+                    // Auto-detect truck type based on plate registration
+                    const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                    const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                    const rate = rates[selectedLocation];
+                    
+                    // Enhanced rate validation with better error messages
+                    if (!rate || rate <= 0) {
+                        const availableLocations = Object.keys(rates).join(', ');
+                        throw new Error(`No rate available for ${truckType.toUpperCase()} truck "${plate}" at location "${selectedLocation}". Available locations for ${truckType.toUpperCase()}: ${availableLocations}`);
+                    }
+                    
+                    // Create multiple records based on quantity
+                    for (let i = 0; i < quantity; i++) {
+                        const record = {
+                            id: Date.now() + Math.random() + i + totalRecordsAdded, // Ensure unique IDs
+                            truckType: truckType, // Auto-detected based on plate
+                            plateNumber: plate,
+                            location: selectedLocation,
+                            site: selectedSite,
+                            date: dispatchDateInput.value,
+                            rate: rate
+                        };
+                        recordsToAdd.push(record);
+                        totalRecordsAdded++;
+                    }
+                });
 
-            saveData(); // Save to localStorage
-            updateSiteTotals();
-            renderDispatchRecords();
-            renderSiteTotals();
-            
-            // Reset form
-            resetForm();
-            
-            // Show success message
-            showSuccessMessage(totalRecordsAdded);
+                // Add all records at once
+                dispatchRecords.push(...recordsToAdd);
+                console.log('✅ Added', totalRecordsAdded, 'records successfully');
+
+                // Save and update displays
+                saveData();
+                updateSiteTotals();
+                renderDispatchRecords();
+                renderSiteTotals();
+                
+                // Reset form
+                resetForm();
+                
+                // Show success message
+                showSuccessMessage(totalRecordsAdded);
+                
+            } catch (error) {
+                console.error('❌ Error adding dispatch record:', error);
+                showErrorMessage('Failed to add dispatch record: ' + error.message);
+                updateRate(); // Re-enable button
+            }
         }
 
         function resetForm() {
@@ -1073,6 +1440,17 @@
             }, 4000);
         }
 
+        function showErrorMessage(text) {
+            const message = document.createElement('div');
+            message.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            message.textContent = '❌ ' + text;
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 5000);
+        }
+
         function showSiteDetails(siteKey) {
             const data = siteTotals[siteKey];
             if (!data) return;
@@ -1250,15 +1628,27 @@
             document.getElementById('multiPlateSection').classList.remove('hidden');
             renderMultiPlateButtons();
             
-            // Show location section
+            // Show location section with ALL locations
             const locationSection = document.getElementById('multiLocationSection');
             const locationButtons = document.getElementById('multiLocationButtons');
             locationSection.classList.remove('hidden');
             
-            const rates = type === 'denjo' ? denjoRates : subconRates;
-            locationButtons.innerHTML = Object.keys(rates).map(location => 
-                `<button class="p-3 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium" onclick="selectMultiLocation('${location}')">${location}</button>`
-            ).join('');
+            // Combine ALL locations from both Denjo and Subcon rates
+            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(subconRates)]);
+            const sortedLocations = Array.from(allLocations).sort();
+            
+            locationButtons.innerHTML = sortedLocations.map(location => {
+                // Check if this location has rates for the selected truck type
+                const rates = type === 'denjo' ? denjoRates : subconRates;
+                const hasRate = rates[location] !== undefined;
+                const buttonClass = hasRate ? 
+                    'p-3 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium' :
+                    'p-3 border border-red-300 bg-red-50 rounded-lg text-sm font-medium text-red-600 cursor-not-allowed opacity-60';
+                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase()})`;
+                const onClickAction = hasRate ? `onclick="selectMultiLocation('${location}')"` : '';
+                
+                return `<button class="${buttonClass}" ${onClickAction}>${buttonText}</button>`;
+            }).join('');
             
             // Hide site section initially
             document.getElementById('multiSiteSection').classList.add('hidden');
@@ -1302,7 +1692,9 @@
         }
 
         function filterMultiPlates() {
-            const searchTerm = document.getElementById('multiPlateSearch').value.toUpperCase();
+            const searchTerm = document.getElementById('multiPlateSearch').value.toUpperCase().trim();
+            
+            console.log('Multi search term:', searchTerm);
             
             if (searchTerm.length === 0) {
                 if (multiSelectedTruckType) {
@@ -1314,20 +1706,52 @@
                 return;
             }
             
-            // Search in both denjo and subcon plates regardless of selected truck type
-            const denjoMatches = denjoPlates.filter(plate => 
-                plate.toUpperCase().includes(searchTerm)
-            );
-            const subconMatches = subconPlates.filter(plate => 
-                plate.toUpperCase().includes(searchTerm)
-            );
+            // Enhanced search - multiple search methods for better accuracy
+            const denjoMatches = denjoPlates.filter(plate => {
+                const plateUpper = plate.toUpperCase().trim();
+                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
+                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
+                
+                return (
+                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
+                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
+                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
+                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
+                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
+                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
+                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
+                );
+            });
+            
+            const subconMatches = subconPlates.filter(plate => {
+                const plateUpper = plate.toUpperCase().trim();
+                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
+                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
+                
+                return (
+                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
+                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
+                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
+                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
+                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
+                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
+                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
+                );
+            });
+            
+            console.log('Multi Denjo matches:', denjoMatches);
+            console.log('Multi Subcon matches:', subconMatches);
             
             // Combine all matches and show them
             const allMatches = [...denjoMatches, ...subconMatches].sort();
             
             if (allMatches.length === 0) {
-                // No matches found
-                renderMultiPlateButtons([]);
+                // No matches found - show helpful message
+                document.getElementById('multiPlateButtons').innerHTML = `
+                    <div class="col-span-full text-center text-gray-500 py-4">
+                        <div>No plates found matching "${searchTerm}"</div>
+                        <div class="text-xs mt-2">💡 Try searching with just letters (e.g., "WMZ") or numbers (e.g., "181")</div>
+                    </div>`;
                 return;
             }
             
@@ -1640,6 +2064,8 @@
             // Calculate total records and amount across all locations with auto-detected truck types
             let totalRecords = 0;
             let totalAmount = 0;
+            let hasInvalidRates = false;
+            let invalidCombinations = [];
             
             multiSelectedPlates.forEach(plate => {
                 // Auto-detect truck type for each plate
@@ -1647,7 +2073,14 @@
                 const rates = truckType === 'denjo' ? denjoRates : subconRates;
                 
                 Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
-                    const locationRate = rates[location] || 0;
+                    const locationRate = rates[location];
+                    
+                    if (!locationRate || locationRate <= 0) {
+                        hasInvalidRates = true;
+                        invalidCombinations.push(`${plate} (${truckType.toUpperCase()}) at ${location}`);
+                        return; // Skip this combination
+                    }
+                    
                     const plateRecordsForLocation = sites.length;
                     totalRecords += plateRecordsForLocation;
                     totalAmount += plateRecordsForLocation * locationRate;
@@ -1655,46 +2088,77 @@
             });
             
             multiRecordCountDiv.textContent = `${totalRecords} records`;
-            multiTotalAmountDiv.textContent = `₱${totalAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
             
-            // Enable button if all fields are filled (no need for date check since each site has its own date)
-            const allFieldsFilled = multiSelectedPlates.length > 0 && multiSelectedSites.length > 0;
-            addMultiDispatchBtn.disabled = !allFieldsFilled;
+            if (hasInvalidRates) {
+                multiTotalAmountDiv.innerHTML = `
+                    <div>₱${totalAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                    <div class="text-xs text-red-600 mt-1">⚠️ Some combinations have no rates</div>
+                `;
+                addMultiDispatchBtn.disabled = true;
+                addMultiDispatchBtn.textContent = 'Cannot create - Invalid rate combinations';
+            } else {
+                multiTotalAmountDiv.textContent = `₱${totalAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+                
+                // Enable button if all fields are filled and no invalid rates
+                const allFieldsFilled = multiSelectedPlates.length > 0 && multiSelectedSites.length > 0;
+                addMultiDispatchBtn.disabled = !allFieldsFilled;
+                
+                if (allFieldsFilled) {
+                    addMultiDispatchBtn.textContent = 'Create All Dispatch Records';
+                }
+            }
         }
 
         function addMultiDispatchRecord() {
-            // Create a record for each combination of plate and site (across all locations)
-            multiSelectedPlates.forEach(plate => {
-                // Auto-detect truck type based on plate registration
-                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+            try {
+                let totalRecordsAdded = 0;
                 
-                Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
-                    sites.forEach(siteObj => {
-                        const record = {
-                            id: Date.now() + Math.random(),
-                            truckType: truckType, // Auto-detected based on plate
-                            plateNumber: plate,
-                            location: location,
-                            site: siteObj.site,
-                            date: siteObj.date,
-                            rate: rates[location]
-                        };
-                        dispatchRecords.push(record);
+                // Create a record for each combination of plate and site (across all locations)
+                multiSelectedPlates.forEach(plate => {
+                    // Auto-detect truck type based on plate registration
+                    const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
+                    const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                    
+                    Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
+                        const rate = rates[location];
+                        
+                        // Enhanced rate validation
+                        if (!rate || rate <= 0) {
+                            const availableLocations = Object.keys(rates).join(', ');
+                            throw new Error(`No rate available for ${truckType.toUpperCase()} truck "${plate}" at location "${location}". Available locations for ${truckType.toUpperCase()}: ${availableLocations}`);
+                        }
+                        
+                        sites.forEach(siteObj => {
+                            const record = {
+                                id: Date.now() + Math.random() + totalRecordsAdded,
+                                truckType: truckType, // Auto-detected based on plate
+                                plateNumber: plate,
+                                location: location,
+                                site: siteObj.site,
+                                date: siteObj.date,
+                                rate: rate
+                            };
+                            dispatchRecords.push(record);
+                            totalRecordsAdded++;
+                        });
                     });
                 });
-            });
 
-            saveData();
-            updateSiteTotals();
-            renderDispatchRecords();
-            renderSiteTotals();
-            
-            // Reset multi form
-            resetMultiForm();
-            
-            // Show success message
-            showMultiSuccessMessage();
+                saveData();
+                updateSiteTotals();
+                renderDispatchRecords();
+                renderSiteTotals();
+                
+                // Reset multi form
+                resetMultiForm();
+                
+                // Show success message
+                showMultiSuccessMessage(totalRecordsAdded);
+                
+            } catch (error) {
+                console.error('❌ Error adding multi dispatch records:', error);
+                showErrorMessage('Failed to add multi dispatch records: ' + error.message);
+            }
         }
 
         function resetMultiForm() {
@@ -1726,8 +2190,7 @@
             addMultiDispatchBtn.disabled = true;
         }
 
-        function showMultiSuccessMessage() {
-            const totalRecords = multiSelectedPlates.length * multiSelectedSites.length;
+        function showMultiSuccessMessage(totalRecords) {
             const message = document.createElement('div');
             message.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
             message.textContent = `✓ ${totalRecords} dispatch records created successfully!`;
@@ -1866,6 +2329,22 @@
                         </div>
                     </div>
 
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 15px; text-align: center; margin: 30px 0;">
+                        <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: bold;">📊 SUMMARY TOTALS</h2>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 600px; margin: 0 auto;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                                <div style="font-size: 16px; margin-bottom: 10px; opacity: 0.9;">TOTAL TRIPS</div>
+                                <div style="font-size: 36px; font-weight: bold;">${totalTrips}</div>
+                                <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">All dispatch records</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px;">
+                                <div style="font-size: 16px; margin-bottom: 10px; opacity: 0.9;">TOTAL SALES</div>
+                                <div style="font-size: 36px; font-weight: bold;">₱${grandTotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                                <div style="font-size: 14px; opacity: 0.8; margin-top: 5px;">All revenue generated</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; color: #666; font-size: 12px;">
                         <p>This report was generated automatically by the Truck Dispatch System</p>
                         <p>Total Records: ${dispatchRecords.length} | Report Generated: ${new Date().toLocaleString('en-PH')}</p>
@@ -1910,8 +2389,155 @@
             }, 3000);
         }
 
+        // Data Management Functions
+        function exportData() {
+            try {
+                const dataToExport = {
+                    dispatchRecords: dispatchRecords,
+                    exportDate: new Date().toISOString(),
+                    totalRecords: dispatchRecords.length,
+                    version: '1.0'
+                };
+                
+                const dataStr = JSON.stringify(dataToExport, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `truck-dispatch-data-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                showSuccessMessage(`Exported ${dispatchRecords.length} records successfully!`);
+            } catch (error) {
+                console.error('Export error:', error);
+                showErrorMessage('Failed to export data: ' + error.message);
+            }
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate imported data
+                    if (!importedData.dispatchRecords || !Array.isArray(importedData.dispatchRecords)) {
+                        throw new Error('Invalid data format');
+                    }
+                    
+                    // Backup current data before import
+                    const backupData = JSON.stringify(dispatchRecords);
+                    localStorage.setItem('dispatchRecords_pre_import_backup', backupData);
+                    
+                    // Import data
+                    dispatchRecords = importedData.dispatchRecords;
+                    saveData();
+                    updateSiteTotals();
+                    renderDispatchRecords();
+                    renderSiteTotals();
+                    
+                    showSuccessMessage(`Imported ${dispatchRecords.length} records successfully!`);
+                    
+                } catch (error) {
+                    console.error('Import error:', error);
+                    showErrorMessage('Failed to import data: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input
+            event.target.value = '';
+        }
+
+        function showDataStatus() {
+            const totalRecords = dispatchRecords.length;
+            const denjoRecords = dispatchRecords.filter(r => r.truckType === 'denjo').length;
+            const subconRecords = dispatchRecords.filter(r => r.truckType === 'subcon').length;
+            const totalSites = Object.keys(siteTotals).length;
+            
+            // Check localStorage usage
+            let storageUsed = 0;
+            try {
+                const data = localStorage.getItem('dispatchRecords');
+                storageUsed = data ? data.length : 0;
+            } catch (e) {
+                storageUsed = 'Unknown';
+            }
+            
+            const lastSaved = localStorage.getItem('dispatchRecords') ? 'Data found in storage' : 'No data in storage';
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">📊 Data Status</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="text-sm font-semibold text-blue-700">Total Records</div>
+                            <div class="text-2xl font-bold text-blue-800">${totalRecords}</div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-blue-50 p-3 rounded-lg text-center">
+                                <div class="text-xs font-semibold text-blue-700">DENJO</div>
+                                <div class="text-lg font-bold text-blue-800">${denjoRecords}</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg text-center">
+                                <div class="text-xs font-semibold text-green-700">SUBCON</div>
+                                <div class="text-lg font-bold text-green-800">${subconRecords}</div>
+                            </div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-sm font-semibold text-purple-700">Active Sites</div>
+                            <div class="text-xl font-bold text-purple-800">${totalSites}</div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <div class="text-sm font-semibold text-yellow-700">Custom Plates Added</div>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div class="text-center">
+                                    <div class="text-lg font-bold text-blue-600">${customDenjoPlates.length}</div>
+                                    <div class="text-xs text-blue-600">Denjo</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg font-bold text-green-600">${customSubconPlates.length}</div>
+                                    <div class="text-xs text-green-600">Subcon</div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-yellow-600 mt-2">Total plates: ${denjoPlates.length + subconPlates.length}</div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm font-semibold text-gray-700">Storage Status</div>
+                            <div class="text-sm text-gray-600">${lastSaved}</div>
+                            <div class="text-xs text-gray-500">Size: ${storageUsed} characters</div>
+                        </div>
+                        <div class="text-xs text-gray-500 text-center">
+                            💡 Tip: Export your data regularly as backup!
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee9543f0edb42b',t:'MTc1NzgzOTI2My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ef174c4549b42b',t:'MTc1Nzg0NDU4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
