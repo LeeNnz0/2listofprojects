@@ -26,10 +26,20 @@
                     </div>
                 </div>
 
-                <!-- Plate Number Selection -->
-                <div id="plateSection" class="hidden">
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">Select Plate Number</label>
+                <!-- Plate Number Search (Always Visible) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Search Plate Number</label>
+                    
+                    <!-- Manual Search Input -->
+                    <div class="mb-4">
+                        <input type="text" id="plateSearch" placeholder="Type plate number to search (e.g. 'NK' or 'AAV')..." 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                               oninput="filterPlates()">
+                        <div class="text-xs text-gray-500 mt-1">💡 Start typing - truck type will be detected automatically!</div>
+                    </div>
+                    
                     <div id="plateButtons" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                        <div class="col-span-full text-center text-gray-500 py-4">Start typing to see matching plate numbers</div>
                     </div>
                 </div>
 
@@ -293,7 +303,10 @@
 
         function selectTruckType(type) {
             selectedTruckType = type;
-            selectedPlate = '';
+            // Don't reset selectedPlate if it was auto-selected from search
+            if (!document.getElementById('plateSearch').value) {
+                selectedPlate = '';
+            }
             selectedLocation = '';
             selectedSite = '';
             
@@ -305,16 +318,6 @@
             document.getElementById('subconBtn').className = type === 'subcon' ? 
                 'flex-1 p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
                 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
-            
-            // Show plate section and populate plates
-            const plateSection = document.getElementById('plateSection');
-            const plateButtons = document.getElementById('plateButtons');
-            plateSection.classList.remove('hidden');
-            
-            const plates = type === 'denjo' ? denjoPlates : subconPlates;
-            plateButtons.innerHTML = plates.map(plate => 
-                `<button class="p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium" onclick="selectPlate('${plate}')">${plate}</button>`
-            ).join('');
             
             // Show location section and populate locations
             const locationSection = document.getElementById('locationSection');
@@ -332,14 +335,76 @@
             updateRate();
         }
 
+        function renderPlateButtons(filteredPlates = null) {
+            const plateButtons = document.getElementById('plateButtons');
+            const plates = filteredPlates || (selectedTruckType === 'denjo' ? denjoPlates : subconPlates);
+            
+            if (plates.length === 0) {
+                plateButtons.innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">No plates found matching your search</div>';
+                return;
+            }
+            
+            plateButtons.innerHTML = plates.map(plate => 
+                `<button class="${selectedPlate === plate ? 'p-2 border-2 border-blue-500 bg-blue-50 rounded-lg text-sm font-medium text-blue-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="selectPlate('${plate}')">${plate}</button>`
+            ).join('');
+        }
+
+        function filterPlates() {
+            const searchTerm = document.getElementById('plateSearch').value.toUpperCase();
+            
+            if (searchTerm.length === 0) {
+                // Reset everything if search is empty
+                if (selectedTruckType) {
+                    renderPlateButtons();
+                }
+                return;
+            }
+            
+            // Auto-detect truck type based on search
+            const denjoMatches = denjoPlates.filter(plate => 
+                plate.toUpperCase().includes(searchTerm)
+            );
+            const subconMatches = subconPlates.filter(plate => 
+                plate.toUpperCase().includes(searchTerm)
+            );
+            
+            // Determine which truck type to select based on matches
+            if (denjoMatches.length > 0 && subconMatches.length === 0) {
+                // Only Denjo matches found
+                if (selectedTruckType !== 'denjo') {
+                    selectTruckType('denjo');
+                }
+                renderPlateButtons(denjoMatches);
+            } else if (subconMatches.length > 0 && denjoMatches.length === 0) {
+                // Only Subcon matches found
+                if (selectedTruckType !== 'subcon') {
+                    selectTruckType('subcon');
+                }
+                renderPlateButtons(subconMatches);
+            } else if (denjoMatches.length > 0 && subconMatches.length > 0) {
+                // Both have matches, show based on current selection or default to all
+                if (selectedTruckType === 'denjo') {
+                    renderPlateButtons(denjoMatches);
+                } else if (selectedTruckType === 'subcon') {
+                    renderPlateButtons(subconMatches);
+                } else {
+                    // No truck type selected yet, show all matches
+                    renderPlateButtons([...denjoMatches, ...subconMatches].sort());
+                }
+            } else {
+                // No matches found
+                renderPlateButtons([]);
+            }
+        }
+
         function selectPlate(plate) {
             selectedPlate = plate;
             
-            // Update button styles
-            const plateButtons = document.getElementById('plateButtons');
-            plateButtons.innerHTML = (selectedTruckType === 'denjo' ? denjoPlates : subconPlates).map(p => 
-                `<button class="${p === plate ? 'p-2 border-2 border-blue-500 bg-blue-50 rounded-lg text-sm font-medium text-blue-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="selectPlate('${p}')">${p}</button>`
-            ).join('');
+            // Update the search input to show selected plate
+            document.getElementById('plateSearch').value = plate;
+            
+            // Re-render buttons to show selection
+            renderPlateButtons();
             
             updateRate();
         }
@@ -434,10 +499,15 @@
             document.getElementById('denjoBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
             document.getElementById('subconBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
+            // Clear search input
+            document.getElementById('plateSearch').value = '';
+            
             // Hide sections
-            document.getElementById('plateSection').classList.add('hidden');
             document.getElementById('locationSection').classList.add('hidden');
             document.getElementById('siteSection').classList.add('hidden');
+            
+            // Reset plate buttons to initial state
+            document.getElementById('plateButtons').innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">Start typing to see matching plate numbers</div>';
             
             // Reset rate and button
             currentRateDiv.textContent = '₱0.00';
@@ -629,5 +699,5 @@
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ed5f4c06b6de84',t:'MTc1NzgyNjU2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ed6bd4c272de84',t:'MTc1NzgyNzA4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
