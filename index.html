@@ -41,10 +41,11 @@
                     <!-- Selected Plates Display -->
                     <div id="selectedPlatesDisplay" class="hidden mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-semibold text-green-700">Selected Plates:</span>
+                            <span class="text-sm font-semibold text-green-700">Selected Plates with Quantities:</span>
                             <button onclick="clearAllSelectedPlates()" class="text-xs text-red-500 hover:text-red-700 font-semibold">Clear All</button>
                         </div>
-                        <div id="selectedPlatesList" class="flex flex-wrap gap-2">
+                        <div class="text-xs text-gray-600 mb-3">💡 Click + or - to adjust how many times each plate visited the site!</div>
+                        <div id="selectedPlatesList" class="space-y-2">
                         </div>
                     </div>
                     
@@ -172,7 +173,12 @@
         
         <!-- Site Totals -->
         <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">🏢 Site Totals</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">🏢 Site Totals</h2>
+                <button onclick="generateReport()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center gap-2">
+                    🖨️ Generate Report
+                </button>
+            </div>
             <div id="siteTotals" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="text-gray-500 text-center py-8 col-span-full">No sites added yet. Add dispatch entries to see totals!</div>
             </div>
@@ -394,7 +400,7 @@
         let dispatchRecords = [];
         let siteTotals = {};
         let selectedTruckType = '';
-        let selectedPlates = [];
+        let selectedPlates = {}; // Changed to object to store quantities: {plateNumber: quantity}
         let selectedLocation = '';
         let selectedSite = '';
 
@@ -448,7 +454,7 @@
             // Only reset selectedPlates if manually selecting truck type (not from auto-detection)
             const isAutoDetection = arguments[1]; // Second parameter to indicate auto-detection
             if (!isAutoDetection && !document.getElementById('plateSearch').value) {
-                selectedPlates = [];
+                selectedPlates = {};
                 updateSelectedPlatesDisplay();
             }
             
@@ -495,7 +501,7 @@
             }
             
             plateButtons.innerHTML = plates.map(plate => 
-                `<button class="${selectedPlates.includes(plate) ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="togglePlateSelection('${plate}')">${plate}</button>`
+                `<button class="${selectedPlates[plate] ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="togglePlateSelection('${plate}')">${plate}${selectedPlates[plate] ? ` (${selectedPlates[plate]})` : ''}</button>`
             ).join('');
         }
 
@@ -513,7 +519,7 @@
                 
                 return `<button class="${isSelected ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : `p-2 border border-gray-300 rounded-lg hover:border-${truckTypeColor}-500 hover:bg-${truckTypeColor}-50 transition-colors text-sm font-medium`}" onclick="selectPlateWithType('${plate}', '${isDenjo ? 'denjo' : 'subcon'}')">
                     <div class="flex items-center justify-between">
-                        <span>${plate}</span>
+                        <span>${plate}${selectedPlates[plate] ? ` (${selectedPlates[plate]})` : ''}</span>
                         <span class="ml-1 px-1 py-0.5 text-xs rounded ${isDenjo ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${truckTypeLabel}</span>
                     </div>
                 </button>`;
@@ -571,12 +577,12 @@
         }
 
         function togglePlateSelection(plate) {
-            if (selectedPlates.includes(plate)) {
+            if (selectedPlates[plate]) {
                 // Remove plate from selection
-                selectedPlates = selectedPlates.filter(p => p !== plate);
+                delete selectedPlates[plate];
             } else {
-                // Add plate to selection
-                selectedPlates.push(plate);
+                // Add plate to selection with quantity 1
+                selectedPlates[plate] = 1;
                 
                 // Clear search input after selecting a plate
                 document.getElementById('plateSearch').value = '';
@@ -599,8 +605,8 @@
                 // Wait for selectTruckType to complete before continuing
                 setTimeout(() => {
                     // Add plate to selection
-                    if (!selectedPlates.includes(plate)) {
-                        selectedPlates.push(plate);
+                    if (!selectedPlates[plate]) {
+                        selectedPlates[plate] = 1;
                     }
                     
                     // Clear search input after selecting a plate
@@ -615,8 +621,8 @@
                 }, 100);
             } else {
                 // Add plate to selection
-                if (!selectedPlates.includes(plate)) {
-                    selectedPlates.push(plate);
+                if (!selectedPlates[plate]) {
+                    selectedPlates[plate] = 1;
                 }
                 
                 // Clear search input after selecting a plate
@@ -635,29 +641,49 @@
             const display = document.getElementById('selectedPlatesDisplay');
             const list = document.getElementById('selectedPlatesList');
             
-            if (selectedPlates.length === 0) {
+            if (Object.keys(selectedPlates).length === 0) {
                 display.classList.add('hidden');
                 return;
             }
             
             display.classList.remove('hidden');
-            list.innerHTML = selectedPlates.map(plate => 
-                `<span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                    ${plate}
-                    <button onclick="removePlateFromSelection('${plate}')" class="text-green-500 hover:text-green-700 ml-1">×</button>
-                </span>`
+            list.innerHTML = Object.entries(selectedPlates).map(([plate, quantity]) => 
+                `<div class="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                    <div class="flex items-center gap-3">
+                        <span class="font-medium text-gray-800">${plate}</span>
+                        <span class="text-xs text-gray-500">visits this site</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="adjustPlateQuantity('${plate}', -1)" class="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-full flex items-center justify-center font-bold">-</button>
+                        <span class="w-8 text-center font-bold text-lg">${quantity}</span>
+                        <button onclick="adjustPlateQuantity('${plate}', 1)" class="w-8 h-8 bg-green-100 hover:bg-green-200 text-green-600 rounded-full flex items-center justify-center font-bold">+</button>
+                        <button onclick="removePlateFromSelection('${plate}')" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button>
+                    </div>
+                </div>`
             ).join('');
         }
 
+        function adjustPlateQuantity(plate, change) {
+            if (selectedPlates[plate]) {
+                selectedPlates[plate] += change;
+                if (selectedPlates[plate] <= 0) {
+                    delete selectedPlates[plate];
+                }
+                updateSelectedPlatesDisplay();
+                renderPlateButtons();
+                updateRate();
+            }
+        }
+
         function removePlateFromSelection(plate) {
-            selectedPlates = selectedPlates.filter(p => p !== plate);
+            delete selectedPlates[plate];
             updateSelectedPlatesDisplay();
             renderPlateButtons();
             updateRate();
         }
 
         function clearAllSelectedPlates() {
-            selectedPlates = [];
+            selectedPlates = {};
             updateSelectedPlatesDisplay();
             renderPlateButtons();
             updateRate();
@@ -701,28 +727,29 @@
         }
 
         function updateRate() {
-            if (!selectedLocation || selectedPlates.length === 0) {
+            if (!selectedLocation || Object.keys(selectedPlates).length === 0) {
                 currentRateDiv.textContent = '₱0.00';
                 addDispatchBtn.disabled = true;
                 return;
             }
 
-            // Calculate total rate based on each plate's actual truck type
+            // Calculate total rate based on each plate's actual truck type and quantity
             let totalRate = 0;
             let rateBreakdown = [];
             
-            selectedPlates.forEach(plate => {
+            Object.entries(selectedPlates).forEach(([plate, quantity]) => {
                 const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
                 const rates = truckType === 'denjo' ? denjoRates : subconRates;
                 const rate = rates[selectedLocation] || 0;
-                totalRate += rate;
+                const plateTotal = rate * quantity;
+                totalRate += plateTotal;
                 
                 // Group by rate for display
                 const existingRate = rateBreakdown.find(r => r.rate === rate && r.type === truckType);
                 if (existingRate) {
-                    existingRate.count++;
+                    existingRate.count += quantity;
                 } else {
-                    rateBreakdown.push({ rate, count: 1, type: truckType });
+                    rateBreakdown.push({ rate, count: quantity, type: truckType });
                 }
             });
             
@@ -734,7 +761,7 @@
             currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${breakdownText})`;
             
             // Enable add button if all fields are filled
-            const allFieldsFilled = selectedPlates.length > 0 && selectedLocation && selectedSite && dispatchDateInput.value;
+            const allFieldsFilled = Object.keys(selectedPlates).length > 0 && selectedLocation && selectedSite && dispatchDateInput.value;
             addDispatchBtn.disabled = !allFieldsFilled;
             
             console.log('Update Rate Debug:', {
@@ -755,29 +782,35 @@
                 dateValue: dispatchDateInput.value
             });
             
-            if (selectedPlates.length === 0 || !selectedLocation || !selectedSite || !dispatchDateInput.value) {
+            if (Object.keys(selectedPlates).length === 0 || !selectedLocation || !selectedSite || !dispatchDateInput.value) {
                 alert('Please fill in all fields before adding dispatch record.');
                 return;
             }
             
-            // Create a record for each selected plate with auto-detected truck type
-            selectedPlates.forEach(plate => {
+            let totalRecordsAdded = 0;
+            
+            // Create records for each selected plate based on quantity
+            Object.entries(selectedPlates).forEach(([plate, quantity]) => {
                 // Auto-detect truck type based on plate registration
                 const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
                 const rates = truckType === 'denjo' ? denjoRates : subconRates;
                 const rate = rates[selectedLocation];
                 
-                const record = {
-                    id: Date.now() + Math.random(), // Ensure unique IDs
-                    truckType: truckType, // Auto-detected based on plate
-                    plateNumber: plate,
-                    location: selectedLocation,
-                    site: selectedSite,
-                    date: dispatchDateInput.value,
-                    rate: rate
-                };
-                dispatchRecords.push(record);
-                console.log('Added record:', record);
+                // Create multiple records based on quantity
+                for (let i = 0; i < quantity; i++) {
+                    const record = {
+                        id: Date.now() + Math.random() + i, // Ensure unique IDs
+                        truckType: truckType, // Auto-detected based on plate
+                        plateNumber: plate,
+                        location: selectedLocation,
+                        site: selectedSite,
+                        date: dispatchDateInput.value,
+                        rate: rate
+                    };
+                    dispatchRecords.push(record);
+                    totalRecordsAdded++;
+                    console.log('Added record:', record);
+                }
             });
 
             saveData(); // Save to localStorage
@@ -789,12 +822,12 @@
             resetForm();
             
             // Show success message
-            showSuccessMessage();
+            showSuccessMessage(totalRecordsAdded);
         }
 
         function resetForm() {
             selectedTruckType = '';
-            selectedPlates = [];
+            selectedPlates = {};
             selectedLocation = '';
             selectedSite = '';
             
@@ -982,10 +1015,10 @@
             renderSiteTotals();
         }
 
-        function showSuccessMessage() {
+        function showSuccessMessage(totalRecords) {
             const message = document.createElement('div');
             message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            message.textContent = `✓ ${selectedPlates.length} dispatch record${selectedPlates.length > 1 ? 's' : ''} added successfully!`;
+            message.textContent = `✓ ${totalRecords} dispatch record${totalRecords > 1 ? 's' : ''} added successfully!`;
             document.body.appendChild(message);
             
             setTimeout(() => {
@@ -1672,5 +1705,5 @@
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee6ab266a106ff',t:'MTc1NzgzNzUyMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee80be200efebf',t:'MTc1NzgzODQyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
