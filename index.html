@@ -86,6 +86,90 @@
             </button>
         </div>
         
+        <!-- Multi-Site Dispatch Section -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-6 border-2 border-purple-200">
+            <h2 class="text-2xl font-bold text-purple-800 mb-6">🚛➡️🏢 Multi-Site Dispatch</h2>
+            <p class="text-sm text-gray-600 mb-6">Perfect for when the same plates visit multiple sites! Select plates once, then pick all the sites they visited.</p>
+            
+            <div class="space-y-6">
+                <!-- Multi Truck Type Selection -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Select Truck Type</label>
+                    <div class="flex gap-3">
+                        <button id="multiDenjoBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('denjo')">
+                            🚛 Denjo Trucks
+                        </button>
+                        <button id="multiSubconBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('subcon')">
+                            🚚 Subcon Trucks
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Multi Plate Search -->
+                <div id="multiPlateSection" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Search & Select Multiple Plates</label>
+                    
+                    <div class="mb-4">
+                        <input type="text" id="multiPlateSearch" placeholder="Type plate number to search..." 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                               oninput="filterMultiPlates()">
+                        <div class="text-xs text-gray-500 mt-1">💡 Click multiple plates to select them all at once!</div>
+                    </div>
+                    
+                    <!-- Multi Selected Plates Display -->
+                    <div id="multiSelectedPlatesDisplay" class="hidden mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-semibold text-purple-700">Selected Plates:</span>
+                            <button onclick="clearAllMultiSelectedPlates()" class="text-xs text-red-500 hover:text-red-700 font-semibold">Clear All</button>
+                        </div>
+                        <div id="multiSelectedPlatesList" class="flex flex-wrap gap-2">
+                        </div>
+                    </div>
+                    
+                    <div id="multiPlateButtons" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-6">
+                        <div class="col-span-full text-center text-gray-500 py-4">Select truck type first</div>
+                    </div>
+                </div>
+
+                <!-- Multi Location & Sites Selection -->
+                <div id="multiLocationSection" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Select Location</label>
+                    <div id="multiLocationButtons" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
+                    </div>
+                    
+                    <div id="multiSiteSection" class="hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Select Multiple Sites</label>
+                        <div class="text-xs text-gray-500 mb-3">💡 Click multiple sites - each selected plate will be recorded for each selected site!</div>
+                        
+                        <!-- Multi Selected Sites Display -->
+                        <div id="multiSelectedSitesDisplay" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-semibold text-blue-700">Selected Sites with Dates:</span>
+                                <button onclick="clearAllMultiSelectedSites()" class="text-xs text-red-500 hover:text-red-700 font-semibold">Clear All</button>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-3">💡 Click on any site below to change its date!</div>
+                            <div id="multiSelectedSitesList" class="space-y-2">
+                            </div>
+                        </div>
+                        
+                        <div id="multiSiteButtons" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multi Preview -->
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <div class="text-sm font-semibold text-gray-700 mb-1">Total Records to Create</div>
+                    <div id="multiRecordCount" class="text-2xl font-bold text-purple-600">0 records</div>
+                    <div id="multiTotalAmount" class="text-lg font-semibold text-green-600">₱0.00</div>
+                </div>
+            </div>
+            
+            <button id="addMultiDispatch" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed mt-6" disabled>
+                Create All Dispatch Records
+            </button>
+        </div>
+        
         <!-- Site Totals -->
         <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">🏢 Site Totals</h2>
@@ -279,12 +363,24 @@
         let selectedLocation = '';
         let selectedSite = '';
 
+        // Multi-site variables
+        let multiSelectedTruckType = '';
+        let multiSelectedPlates = [];
+        let multiSelectedLocation = '';
+        let multiSelectedSites = [];
+        let multiSitesByLocation = {}; // Track sites by location with dates: {location: [{site: 'siteName', date: 'YYYY-MM-DD'}]}
+
         // DOM elements
         const dispatchDateInput = document.getElementById('dispatchDate');
         const currentRateDiv = document.getElementById('currentRate');
         const addDispatchBtn = document.getElementById('addDispatch');
         const dispatchRecordsDiv = document.getElementById('dispatchRecords');
         const siteTotalsDiv = document.getElementById('siteTotals');
+        
+        // Multi-site DOM elements
+        const addMultiDispatchBtn = document.getElementById('addMultiDispatch');
+        const multiRecordCountDiv = document.getElementById('multiRecordCount');
+        const multiTotalAmountDiv = document.getElementById('multiTotalAmount');
 
         // Load data from localStorage on page load
         function loadData() {
@@ -307,6 +403,7 @@
 
         // Event listeners
         addDispatchBtn.addEventListener('click', addDispatchRecord);
+        addMultiDispatchBtn.addEventListener('click', addMultiDispatchRecord);
 
         // Load saved data when page loads
         loadData();
@@ -360,6 +457,27 @@
             ).join('');
         }
 
+        function renderMixedPlateButtons(denjoMatches, subconMatches) {
+            const plateButtons = document.getElementById('plateButtons');
+            
+            // Combine and sort all matches
+            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            
+            plateButtons.innerHTML = allMatches.map(plate => {
+                const isDenjo = denjoMatches.includes(plate);
+                const truckTypeColor = isDenjo ? 'blue' : 'green';
+                const truckTypeLabel = isDenjo ? 'D' : 'S';
+                const isSelected = selectedPlates.includes(plate);
+                
+                return `<button class="${isSelected ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : `p-2 border border-gray-300 rounded-lg hover:border-${truckTypeColor}-500 hover:bg-${truckTypeColor}-50 transition-colors text-sm font-medium`}" onclick="selectPlateWithType('${plate}', '${isDenjo ? 'denjo' : 'subcon'}')">
+                    <div class="flex items-center justify-between">
+                        <span>${plate}</span>
+                        <span class="ml-1 px-1 py-0.5 text-xs rounded ${isDenjo ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${truckTypeLabel}</span>
+                    </div>
+                </button>`;
+            }).join('');
+        }
+
         function filterPlates() {
             const searchTerm = document.getElementById('plateSearch').value.toUpperCase();
             
@@ -367,11 +485,14 @@
                 // Reset everything if search is empty
                 if (selectedTruckType) {
                     renderPlateButtons();
+                } else {
+                    // Show initial message when no truck type selected and no search
+                    document.getElementById('plateButtons').innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">Start typing to see matching plate numbers</div>';
                 }
                 return;
             }
             
-            // Auto-detect truck type based on search
+            // Search in both denjo and subcon plates regardless of selected truck type
             const denjoMatches = denjoPlates.filter(plate => 
                 plate.toUpperCase().includes(searchTerm)
             );
@@ -379,7 +500,16 @@
                 plate.toUpperCase().includes(searchTerm)
             );
             
-            // Determine which truck type to select based on matches
+            // Combine all matches and show them
+            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            
+            if (allMatches.length === 0) {
+                // No matches found
+                renderPlateButtons([]);
+                return;
+            }
+            
+            // Auto-detect and set truck type if only one type has matches
             if (denjoMatches.length > 0 && subconMatches.length === 0) {
                 // Only Denjo matches found
                 if (selectedTruckType !== 'denjo') {
@@ -392,19 +522,9 @@
                     selectTruckType('subcon');
                 }
                 renderPlateButtons(subconMatches);
-            } else if (denjoMatches.length > 0 && subconMatches.length > 0) {
-                // Both have matches, show based on current selection or default to all
-                if (selectedTruckType === 'denjo') {
-                    renderPlateButtons(denjoMatches);
-                } else if (selectedTruckType === 'subcon') {
-                    renderPlateButtons(subconMatches);
-                } else {
-                    // No truck type selected yet, show all matches
-                    renderPlateButtons([...denjoMatches, ...subconMatches].sort());
-                }
             } else {
-                // No matches found
-                renderPlateButtons([]);
+                // Both types have matches - show all with type indicators
+                renderMixedPlateButtons(denjoMatches, subconMatches);
             }
         }
 
@@ -424,6 +544,28 @@
                     renderPlateButtons();
                 }
             }
+            
+            // Update displays
+            updateSelectedPlatesDisplay();
+            updateRate();
+        }
+
+        function selectPlateWithType(plate, truckType) {
+            // Auto-select truck type if not already selected or if different
+            if (selectedTruckType !== truckType) {
+                selectTruckType(truckType);
+            }
+            
+            // Add plate to selection
+            if (!selectedPlates.includes(plate)) {
+                selectedPlates.push(plate);
+            }
+            
+            // Clear search input after selecting a plate
+            document.getElementById('plateSearch').value = '';
+            
+            // Reset plate buttons to show all available plates for current truck type
+            renderPlateButtons();
             
             // Update displays
             updateSelectedPlatesDisplay();
@@ -875,8 +1017,510 @@
             }
         }
 
+        // Multi-Site Functions
+        function selectMultiTruckType(type) {
+            multiSelectedTruckType = type;
+            multiSelectedPlates = [];
+            multiSelectedLocation = '';
+            multiSelectedSites = [];
+            
+            // Update button styles
+            document.getElementById('multiDenjoBtn').className = type === 'denjo' ? 
+                'flex-1 p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
+                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            
+            document.getElementById('multiSubconBtn').className = type === 'subcon' ? 
+                'flex-1 p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
+                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            
+            // Show plate section
+            document.getElementById('multiPlateSection').classList.remove('hidden');
+            renderMultiPlateButtons();
+            
+            // Show location section
+            const locationSection = document.getElementById('multiLocationSection');
+            const locationButtons = document.getElementById('multiLocationButtons');
+            locationSection.classList.remove('hidden');
+            
+            const rates = type === 'denjo' ? denjoRates : subconRates;
+            locationButtons.innerHTML = Object.keys(rates).map(location => 
+                `<button class="p-3 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium" onclick="selectMultiLocation('${location}')">${location}</button>`
+            ).join('');
+            
+            // Hide site section initially
+            document.getElementById('multiSiteSection').classList.add('hidden');
+            
+            updateMultiPreview();
+        }
+
+        function renderMultiPlateButtons(filteredPlates = null) {
+            const plateButtons = document.getElementById('multiPlateButtons');
+            const plates = filteredPlates || (multiSelectedTruckType === 'denjo' ? denjoPlates : subconPlates);
+            
+            if (plates.length === 0) {
+                plateButtons.innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">No plates found matching your search</div>';
+                return;
+            }
+            
+            plateButtons.innerHTML = plates.map(plate => 
+                `<button class="${multiSelectedPlates.includes(plate) ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : 'p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium'}" onclick="toggleMultiPlateSelection('${plate}')">${plate}</button>`
+            ).join('');
+        }
+
+        function renderMixedMultiPlateButtons(denjoMatches, subconMatches) {
+            const plateButtons = document.getElementById('multiPlateButtons');
+            
+            // Combine and sort all matches
+            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            
+            plateButtons.innerHTML = allMatches.map(plate => {
+                const isDenjo = denjoMatches.includes(plate);
+                const truckTypeColor = isDenjo ? 'blue' : 'green';
+                const truckTypeLabel = isDenjo ? 'D' : 'S';
+                const isSelected = multiSelectedPlates.includes(plate);
+                
+                return `<button class="${isSelected ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : `p-2 border border-gray-300 rounded-lg hover:border-${truckTypeColor}-500 hover:bg-${truckTypeColor}-50 transition-colors text-sm font-medium`}" onclick="selectMultiPlateWithType('${plate}', '${isDenjo ? 'denjo' : 'subcon'}')">
+                    <div class="flex items-center justify-between">
+                        <span>${plate}</span>
+                        <span class="ml-1 px-1 py-0.5 text-xs rounded ${isDenjo ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${truckTypeLabel}</span>
+                    </div>
+                </button>`;
+            }).join('');
+        }
+
+        function filterMultiPlates() {
+            const searchTerm = document.getElementById('multiPlateSearch').value.toUpperCase();
+            
+            if (searchTerm.length === 0) {
+                if (multiSelectedTruckType) {
+                    renderMultiPlateButtons();
+                } else {
+                    // Show initial message when no truck type selected and no search
+                    document.getElementById('multiPlateButtons').innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">Select truck type first or start typing to search</div>';
+                }
+                return;
+            }
+            
+            // Search in both denjo and subcon plates regardless of selected truck type
+            const denjoMatches = denjoPlates.filter(plate => 
+                plate.toUpperCase().includes(searchTerm)
+            );
+            const subconMatches = subconPlates.filter(plate => 
+                plate.toUpperCase().includes(searchTerm)
+            );
+            
+            // Combine all matches and show them
+            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            
+            if (allMatches.length === 0) {
+                // No matches found
+                renderMultiPlateButtons([]);
+                return;
+            }
+            
+            // Auto-detect and set truck type if only one type has matches
+            if (denjoMatches.length > 0 && subconMatches.length === 0) {
+                // Only Denjo matches found
+                if (multiSelectedTruckType !== 'denjo') {
+                    selectMultiTruckType('denjo');
+                }
+                renderMultiPlateButtons(denjoMatches);
+            } else if (subconMatches.length > 0 && denjoMatches.length === 0) {
+                // Only Subcon matches found
+                if (multiSelectedTruckType !== 'subcon') {
+                    selectMultiTruckType('subcon');
+                }
+                renderMultiPlateButtons(subconMatches);
+            } else {
+                // Both types have matches - show all with type indicators
+                renderMixedMultiPlateButtons(denjoMatches, subconMatches);
+            }
+        }
+
+        function toggleMultiPlateSelection(plate) {
+            if (multiSelectedPlates.includes(plate)) {
+                multiSelectedPlates = multiSelectedPlates.filter(p => p !== plate);
+            } else {
+                multiSelectedPlates.push(plate);
+            }
+            
+            updateMultiSelectedPlatesDisplay();
+            renderMultiPlateButtons();
+            updateMultiPreview();
+        }
+
+        function selectMultiPlateWithType(plate, truckType) {
+            // Auto-select truck type if not already selected or if different
+            if (multiSelectedTruckType !== truckType) {
+                selectMultiTruckType(truckType);
+            }
+            
+            // Add plate to selection
+            if (!multiSelectedPlates.includes(plate)) {
+                multiSelectedPlates.push(plate);
+            }
+            
+            // Clear search input after selecting a plate
+            document.getElementById('multiPlateSearch').value = '';
+            
+            // Reset plate buttons to show all available plates for current truck type
+            renderMultiPlateButtons();
+            
+            // Update displays
+            updateMultiSelectedPlatesDisplay();
+            updateMultiPreview();
+        }
+
+        function updateMultiSelectedPlatesDisplay() {
+            const display = document.getElementById('multiSelectedPlatesDisplay');
+            const list = document.getElementById('multiSelectedPlatesList');
+            
+            if (multiSelectedPlates.length === 0) {
+                display.classList.add('hidden');
+                return;
+            }
+            
+            display.classList.remove('hidden');
+            list.innerHTML = multiSelectedPlates.map(plate => 
+                `<span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                    ${plate}
+                    <button onclick="removeMultiPlateFromSelection('${plate}')" class="text-purple-500 hover:text-purple-700 ml-1">×</button>
+                </span>`
+            ).join('');
+        }
+
+        function removeMultiPlateFromSelection(plate) {
+            multiSelectedPlates = multiSelectedPlates.filter(p => p !== plate);
+            updateMultiSelectedPlatesDisplay();
+            renderMultiPlateButtons();
+            updateMultiPreview();
+        }
+
+        function clearAllMultiSelectedPlates() {
+            multiSelectedPlates = [];
+            updateMultiSelectedPlatesDisplay();
+            renderMultiPlateButtons();
+            updateMultiPreview();
+        }
+
+        function selectMultiLocation(location) {
+            multiSelectedLocation = location;
+            
+            // Update location button styles
+            const rates = multiSelectedTruckType === 'denjo' ? denjoRates : subconRates;
+            const locationButtons = document.getElementById('multiLocationButtons');
+            locationButtons.innerHTML = Object.keys(rates).map(loc => {
+                // Check if this location has selected sites
+                const hasSelectedSites = multiSitesByLocation[loc] && multiSitesByLocation[loc].length > 0;
+                const siteCount = hasSelectedSites ? multiSitesByLocation[loc].length : 0;
+                const baseClass = 'p-3 border rounded-lg text-sm font-medium transition-colors';
+                
+                if (loc === location) {
+                    return `<button class="${baseClass} border-2 border-purple-500 bg-purple-50 text-purple-700" onclick="selectMultiLocation('${loc}')">${loc}${hasSelectedSites ? ` ✓(${siteCount})` : ''}</button>`;
+                } else if (hasSelectedSites) {
+                    return `<button class="${baseClass} border-2 border-green-400 bg-green-50 text-green-700 hover:border-purple-500 hover:bg-purple-50" onclick="selectMultiLocation('${loc}')">${loc} ✓(${siteCount})</button>`;
+                } else {
+                    return `<button class="${baseClass} border-gray-300 hover:border-purple-500 hover:bg-purple-50" onclick="selectMultiLocation('${loc}')">${loc}</button>`;
+                }
+            }).join('');
+            
+            // Show and populate site section
+            const siteSection = document.getElementById('multiSiteSection');
+            const siteButtons = document.getElementById('multiSiteButtons');
+            siteSection.classList.remove('hidden');
+            
+            if (locationSites[location]) {
+                // Get previously selected sites for this location with counts
+                const selectedSitesForLocation = multiSitesByLocation[location] || [];
+                
+                siteButtons.innerHTML = locationSites[location].map(site => {
+                    const siteCount = selectedSitesForLocation.filter(siteObj => siteObj.site === site).length;
+                    const isSelected = siteCount > 0;
+                    const countText = siteCount > 1 ? ` (${siteCount})` : '';
+                    return `<button class="${isSelected ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : 'p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium'}" onclick="toggleMultiSiteSelection('${site}')">${site}${countText}</button>`;
+                }).join('');
+            }
+            
+            updateMultiSelectedSitesDisplay();
+            updateMultiPreview();
+        }
+
+        function toggleMultiSiteSelection(site) {
+            // Initialize location array if it doesn't exist
+            if (!multiSitesByLocation[multiSelectedLocation]) {
+                multiSitesByLocation[multiSelectedLocation] = [];
+            }
+            
+            // Always add the site (allow multiple selections of same site)
+            const today = new Date().toISOString().split('T')[0];
+            multiSitesByLocation[multiSelectedLocation].push({
+                site: site,
+                date: today,
+                id: Date.now() + Math.random() // Unique ID for each selection
+            });
+            
+            // Update global multiSelectedSites array with all sites from all locations
+            multiSelectedSites = [];
+            Object.values(multiSitesByLocation).forEach(sites => {
+                sites.forEach(siteObj => {
+                    multiSelectedSites.push(siteObj.site);
+                });
+            });
+            
+            // Update site button styles for current location - show count if multiple selections
+            const siteButtons = document.getElementById('multiSiteButtons');
+            siteButtons.innerHTML = locationSites[multiSelectedLocation].map(s => {
+                const siteCount = multiSitesByLocation[multiSelectedLocation].filter(siteObj => siteObj.site === s).length;
+                const isSelected = siteCount > 0;
+                const countText = siteCount > 1 ? ` (${siteCount})` : '';
+                return `<button class="${isSelected ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : 'p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium'}" onclick="toggleMultiSiteSelection('${s}')">${s}${countText}</button>`;
+            }).join('');
+            
+            // Update location buttons to show checkmarks
+            selectMultiLocation(multiSelectedLocation);
+            
+            updateMultiSelectedSitesDisplay();
+            updateMultiPreview();
+        }
+
+        function updateMultiSelectedSitesDisplay() {
+            const display = document.getElementById('multiSelectedSitesDisplay');
+            const list = document.getElementById('multiSelectedSitesList');
+            
+            if (multiSelectedSites.length === 0) {
+                display.classList.add('hidden');
+                return;
+            }
+            
+            display.classList.remove('hidden');
+            
+            // Group sites by location for display
+            let displayHTML = '';
+            Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
+                if (sites.length > 0) {
+                    displayHTML += `<div class="w-full mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                        <div class="text-sm font-bold text-gray-700 mb-3">${location} (${sites.length} entries):</div>
+                        <div class="space-y-2">
+                            ${sites.map((siteObj, index) => 
+                                `<div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                    <div class="flex-1">
+                                        <span class="font-medium text-gray-800">${siteObj.site}</span>
+                                        <span class="text-xs text-gray-500 ml-2">#${index + 1}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="date" value="${siteObj.date}" 
+                                               onchange="updateSiteDate('${location}', ${index}, this.value)"
+                                               class="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                        <button onclick="removeSpecificSiteEntry('${location}', ${index})" 
+                                                class="text-red-500 hover:text-red-700 font-bold text-lg">×</button>
+                                    </div>
+                                </div>`
+                            ).join('')}
+                        </div>
+                    </div>`;
+                }
+            });
+            
+            list.innerHTML = displayHTML;
+        }
+
+        function updateSiteDate(location, siteIndex, newDate) {
+            if (multiSitesByLocation[location] && multiSitesByLocation[location][siteIndex]) {
+                multiSitesByLocation[location][siteIndex].date = newDate;
+                updateMultiPreview();
+            }
+        }
+
+        function removeSpecificSiteEntry(location, index) {
+            // Remove specific entry by index
+            if (multiSitesByLocation[location] && multiSitesByLocation[location][index]) {
+                multiSitesByLocation[location].splice(index, 1);
+            }
+            
+            // Update global multiSelectedSites array
+            multiSelectedSites = [];
+            Object.values(multiSitesByLocation).forEach(sites => {
+                sites.forEach(siteObj => {
+                    multiSelectedSites.push(siteObj.site);
+                });
+            });
+            
+            // If we're currently viewing this location, update the site buttons
+            if (multiSelectedLocation === location) {
+                const siteButtons = document.getElementById('multiSiteButtons');
+                siteButtons.innerHTML = locationSites[multiSelectedLocation].map(s => {
+                    const siteCount = multiSitesByLocation[multiSelectedLocation].filter(siteObj => siteObj.site === s).length;
+                    const isSelected = siteCount > 0;
+                    const countText = siteCount > 1 ? ` (${siteCount})` : '';
+                    return `<button class="${isSelected ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : 'p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium'}" onclick="toggleMultiSiteSelection('${s}')">${s}${countText}</button>`;
+                }).join('');
+            }
+            
+            // Update location buttons to show/hide checkmarks
+            selectMultiLocation(multiSelectedLocation);
+            
+            updateMultiSelectedSitesDisplay();
+            updateMultiPreview();
+        }
+
+        function removeMultiSiteFromSelection(site, location) {
+            // Remove ALL entries of this site from specific location
+            if (multiSitesByLocation[location]) {
+                multiSitesByLocation[location] = multiSitesByLocation[location].filter(siteObj => siteObj.site !== site);
+            }
+            
+            // Update global multiSelectedSites array
+            multiSelectedSites = [];
+            Object.values(multiSitesByLocation).forEach(sites => {
+                sites.forEach(siteObj => {
+                    multiSelectedSites.push(siteObj.site);
+                });
+            });
+            
+            // If we're currently viewing this location, update the site buttons
+            if (multiSelectedLocation === location) {
+                const siteButtons = document.getElementById('multiSiteButtons');
+                siteButtons.innerHTML = locationSites[multiSelectedLocation].map(s => {
+                    const siteCount = multiSitesByLocation[multiSelectedLocation].filter(siteObj => siteObj.site === s).length;
+                    const isSelected = siteCount > 0;
+                    const countText = siteCount > 1 ? ` (${siteCount})` : '';
+                    return `<button class="${isSelected ? 'p-2 border-2 border-purple-500 bg-purple-50 rounded-lg text-sm font-medium text-purple-700' : 'p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium'}" onclick="toggleMultiSiteSelection('${s}')">${s}${countText}</button>`;
+                }).join('');
+            }
+            
+            // Update location buttons to show/hide checkmarks
+            selectMultiLocation(multiSelectedLocation);
+            
+            updateMultiSelectedSitesDisplay();
+            updateMultiPreview();
+        }
+
+        function clearAllMultiSelectedSites() {
+            multiSelectedSites = [];
+            multiSitesByLocation = {};
+            
+            // Update site button styles for current location
+            if (multiSelectedLocation && locationSites[multiSelectedLocation]) {
+                const siteButtons = document.getElementById('multiSiteButtons');
+                siteButtons.innerHTML = locationSites[multiSelectedLocation].map(site => 
+                    `<button class="p-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium" onclick="toggleMultiSiteSelection('${site}')">${site}</button>`
+                ).join('');
+            }
+            
+            // Update location buttons to remove checkmarks
+            if (multiSelectedLocation) {
+                selectMultiLocation(multiSelectedLocation);
+            }
+            
+            updateMultiSelectedSitesDisplay();
+            updateMultiPreview();
+        }
+
+        function updateMultiPreview() {
+            if (!multiSelectedTruckType || multiSelectedPlates.length === 0 || multiSelectedSites.length === 0) {
+                multiRecordCountDiv.textContent = '0 records';
+                multiTotalAmountDiv.textContent = '₱0.00';
+                addMultiDispatchBtn.disabled = true;
+                return;
+            }
+
+            const rates = multiSelectedTruckType === 'denjo' ? denjoRates : subconRates;
+            
+            // Calculate total records and amount across all locations
+            let totalRecords = 0;
+            let totalAmount = 0;
+            
+            Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
+                const locationRate = rates[location] || 0;
+                const locationRecords = multiSelectedPlates.length * sites.length;
+                totalRecords += locationRecords;
+                totalAmount += locationRecords * locationRate;
+            });
+            
+            multiRecordCountDiv.textContent = `${totalRecords} records`;
+            multiTotalAmountDiv.textContent = `₱${totalAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+            
+            // Enable button if all fields are filled (no need for date check since each site has its own date)
+            const allFieldsFilled = multiSelectedPlates.length > 0 && multiSelectedSites.length > 0;
+            addMultiDispatchBtn.disabled = !allFieldsFilled;
+        }
+
+        function addMultiDispatchRecord() {
+            const rates = multiSelectedTruckType === 'denjo' ? denjoRates : subconRates;
+
+            // Create a record for each combination of plate and site (across all locations)
+            multiSelectedPlates.forEach(plate => {
+                Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
+                    sites.forEach(siteObj => {
+                        const record = {
+                            id: Date.now() + Math.random(),
+                            truckType: multiSelectedTruckType,
+                            plateNumber: plate,
+                            location: location,
+                            site: siteObj.site,
+                            date: siteObj.date,
+                            rate: rates[location]
+                        };
+                        dispatchRecords.push(record);
+                    });
+                });
+            });
+
+            saveData();
+            updateSiteTotals();
+            renderDispatchRecords();
+            renderSiteTotals();
+            
+            // Reset multi form
+            resetMultiForm();
+            
+            // Show success message
+            showMultiSuccessMessage();
+        }
+
+        function resetMultiForm() {
+            multiSelectedTruckType = '';
+            multiSelectedPlates = [];
+            multiSelectedLocation = '';
+            multiSelectedSites = [];
+            multiSitesByLocation = {};
+            
+            // Reset truck type buttons
+            document.getElementById('multiDenjoBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            document.getElementById('multiSubconBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            
+            // Clear search input
+            document.getElementById('multiPlateSearch').value = '';
+            
+            // Hide sections
+            document.getElementById('multiPlateSection').classList.add('hidden');
+            document.getElementById('multiLocationSection').classList.add('hidden');
+            document.getElementById('multiSiteSection').classList.add('hidden');
+            
+            // Hide selected displays
+            updateMultiSelectedPlatesDisplay();
+            updateMultiSelectedSitesDisplay();
+            
+            // Reset preview and button
+            multiRecordCountDiv.textContent = '0 records';
+            multiTotalAmountDiv.textContent = '₱0.00';
+            addMultiDispatchBtn.disabled = true;
+        }
+
+        function showMultiSuccessMessage() {
+            const totalRecords = multiSelectedPlates.length * multiSelectedSites.length;
+            const message = document.createElement('div');
+            message.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            message.textContent = `✓ ${totalRecords} dispatch records created successfully!`;
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.remove();
+            }, 3000);
+        }
+
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97edb5db45a80df8',t:'MTc1NzgzMDExMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ede12931f2fee1',t:'MTc1NzgzMTg4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
