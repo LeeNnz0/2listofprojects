@@ -34,8 +34,18 @@
                     <div class="mb-4">
                         <input type="text" id="plateSearch" placeholder="Type plate number to search (e.g. 'NK' or 'AAV')..." 
                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                               oninput="filterPlates()">
-                        <div class="text-xs text-gray-500 mt-1">💡 Start typing - truck type will be detected automatically!</div>
+                               oninput="filterPlates()" onkeypress="handleEnterKey(event)">
+                        <div class="text-xs text-gray-500 mt-1">💡 Start typing - truck type will be detected automatically! Click plates to select multiple.</div>
+                    </div>
+                    
+                    <!-- Selected Plates Display -->
+                    <div id="selectedPlatesDisplay" class="hidden mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-semibold text-green-700">Selected Plates:</span>
+                            <button onclick="clearAllSelectedPlates()" class="text-xs text-red-500 hover:text-red-700 font-semibold">Clear All</button>
+                        </div>
+                        <div id="selectedPlatesList" class="flex flex-wrap gap-2">
+                        </div>
                     </div>
                     
                     <div id="plateButtons" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
@@ -265,7 +275,7 @@
         let dispatchRecords = [];
         let siteTotals = {};
         let selectedTruckType = '';
-        let selectedPlate = '';
+        let selectedPlates = [];
         let selectedLocation = '';
         let selectedSite = '';
 
@@ -303,9 +313,10 @@
 
         function selectTruckType(type) {
             selectedTruckType = type;
-            // Don't reset selectedPlate if it was auto-selected from search
+            // Don't reset selectedPlates if they were auto-selected from search
             if (!document.getElementById('plateSearch').value) {
-                selectedPlate = '';
+                selectedPlates = [];
+                updateSelectedPlatesDisplay();
             }
             selectedLocation = '';
             selectedSite = '';
@@ -345,7 +356,7 @@
             }
             
             plateButtons.innerHTML = plates.map(plate => 
-                `<button class="${selectedPlate === plate ? 'p-2 border-2 border-blue-500 bg-blue-50 rounded-lg text-sm font-medium text-blue-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="selectPlate('${plate}')">${plate}</button>`
+                `<button class="${selectedPlates.includes(plate) ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : 'p-2 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium'}" onclick="togglePlateSelection('${plate}')">${plate}</button>`
             ).join('');
         }
 
@@ -397,15 +408,57 @@
             }
         }
 
-        function selectPlate(plate) {
-            selectedPlate = plate;
+        function togglePlateSelection(plate) {
+            if (selectedPlates.includes(plate)) {
+                // Remove plate from selection
+                selectedPlates = selectedPlates.filter(p => p !== plate);
+            } else {
+                // Add plate to selection
+                selectedPlates.push(plate);
+                
+                // Clear search input after selecting a plate
+                document.getElementById('plateSearch').value = '';
+                
+                // Reset plate buttons to show all available plates for current truck type
+                if (selectedTruckType) {
+                    renderPlateButtons();
+                }
+            }
             
-            // Update the search input to show selected plate
-            document.getElementById('plateSearch').value = plate;
+            // Update displays
+            updateSelectedPlatesDisplay();
+            updateRate();
+        }
+
+        function updateSelectedPlatesDisplay() {
+            const display = document.getElementById('selectedPlatesDisplay');
+            const list = document.getElementById('selectedPlatesList');
             
-            // Re-render buttons to show selection
+            if (selectedPlates.length === 0) {
+                display.classList.add('hidden');
+                return;
+            }
+            
+            display.classList.remove('hidden');
+            list.innerHTML = selectedPlates.map(plate => 
+                `<span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    ${plate}
+                    <button onclick="removePlateFromSelection('${plate}')" class="text-green-500 hover:text-green-700 ml-1">×</button>
+                </span>`
+            ).join('');
+        }
+
+        function removePlateFromSelection(plate) {
+            selectedPlates = selectedPlates.filter(p => p !== plate);
+            updateSelectedPlatesDisplay();
             renderPlateButtons();
-            
+            updateRate();
+        }
+
+        function clearAllSelectedPlates() {
+            selectedPlates = [];
+            updateSelectedPlatesDisplay();
+            renderPlateButtons();
             updateRate();
         }
 
@@ -447,7 +500,7 @@
         }
 
         function updateRate() {
-            if (!selectedTruckType || !selectedLocation) {
+            if (!selectedTruckType || !selectedLocation || selectedPlates.length === 0) {
                 currentRateDiv.textContent = '₱0.00';
                 addDispatchBtn.disabled = true;
                 return;
@@ -455,28 +508,34 @@
 
             const rates = selectedTruckType === 'denjo' ? denjoRates : subconRates;
             const rate = rates[selectedLocation] || 0;
+            const totalRate = rate * selectedPlates.length;
             
-            currentRateDiv.textContent = `₱${rate.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+            currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${selectedPlates.length} plates × ₱${rate.toLocaleString('en-PH', {minimumFractionDigits: 2})})`;
             
             // Enable add button if all fields are filled
-            const allFieldsFilled = selectedPlate && selectedLocation && selectedSite && dispatchDateInput.value;
+            const allFieldsFilled = selectedPlates.length > 0 && selectedLocation && selectedSite && dispatchDateInput.value;
             addDispatchBtn.disabled = !allFieldsFilled;
         }
 
         function addDispatchRecord() {
-            const record = {
-                id: Date.now(),
-                truckType: selectedTruckType,
-                plateNumber: selectedPlate,
-                location: selectedLocation,
-                site: selectedSite,
-                date: dispatchDateInput.value,
-                rate: selectedTruckType === 'denjo' ? 
+            const rate = selectedTruckType === 'denjo' ? 
                       denjoRates[selectedLocation] : 
-                      subconRates[selectedLocation]
-            };
+                      subconRates[selectedLocation];
 
-            dispatchRecords.push(record);
+            // Create a record for each selected plate
+            selectedPlates.forEach(plate => {
+                const record = {
+                    id: Date.now() + Math.random(), // Ensure unique IDs
+                    truckType: selectedTruckType,
+                    plateNumber: plate,
+                    location: selectedLocation,
+                    site: selectedSite,
+                    date: dispatchDateInput.value,
+                    rate: rate
+                };
+                dispatchRecords.push(record);
+            });
+
             saveData(); // Save to localStorage
             updateSiteTotals();
             renderDispatchRecords();
@@ -491,7 +550,7 @@
 
         function resetForm() {
             selectedTruckType = '';
-            selectedPlate = '';
+            selectedPlates = [];
             selectedLocation = '';
             selectedSite = '';
             
@@ -508,6 +567,9 @@
             
             // Reset plate buttons to initial state
             document.getElementById('plateButtons').innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">Start typing to see matching plate numbers</div>';
+            
+            // Hide selected plates display
+            updateSelectedPlatesDisplay();
             
             // Reset rate and button
             currentRateDiv.textContent = '₱0.00';
@@ -552,9 +614,10 @@
             }
 
             siteTotalsDiv.innerHTML = Object.entries(siteTotals).map(([siteKey, data]) => `
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200 cursor-pointer hover:shadow-lg transition-shadow" onclick="showSiteDetails('${siteKey}')">
                     <div class="text-sm font-semibold text-gray-600 mb-1">${data.location}</div>
                     <div class="text-lg font-bold text-gray-800 mb-4">${data.site}</div>
+                    <div class="text-xs text-blue-600 mb-4">👆 Click to see plate details</div>
                     <div class="space-y-3">
                         ${data.denjoCount > 0 ? `
                         <div class="bg-blue-100 rounded-lg p-3">
@@ -643,7 +706,8 @@
             
             // Wait a bit for the UI to update, then select other fields
             setTimeout(() => {
-                selectPlate(record.plateNumber);
+                selectedPlates = [record.plateNumber];
+                updateSelectedPlatesDisplay();
                 selectLocation(record.location);
                 
                 setTimeout(() => {
@@ -677,7 +741,7 @@
         function showSuccessMessage() {
             const message = document.createElement('div');
             message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            message.textContent = '✓ Dispatch record added successfully!';
+            message.textContent = `✓ ${selectedPlates.length} dispatch record${selectedPlates.length > 1 ? 's' : ''} added successfully!`;
             document.body.appendChild(message);
             
             setTimeout(() => {
@@ -696,8 +760,123 @@
             }, 4000);
         }
 
+        function showSiteDetails(siteKey) {
+            const data = siteTotals[siteKey];
+            if (!data) return;
+            
+            // Get all records for this site
+            const siteRecords = dispatchRecords.filter(record => 
+                `${record.location} - ${record.site}` === siteKey
+            );
+            
+            // Count plates
+            const plateCounts = {};
+            siteRecords.forEach(record => {
+                if (!plateCounts[record.plateNumber]) {
+                    plateCounts[record.plateNumber] = {
+                        count: 0,
+                        truckType: record.truckType,
+                        total: 0
+                    };
+                }
+                plateCounts[record.plateNumber].count += 1;
+                plateCounts[record.plateNumber].total += record.rate;
+            });
+            
+            // Create modal content
+            const plateDetails = Object.entries(plateCounts)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([plate, info]) => `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-lg">${plate}</span>
+                            <span class="px-2 py-1 text-xs rounded-full ${info.truckType === 'denjo' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${info.truckType.toUpperCase()}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-lg text-green-600">₱${info.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                            <div class="text-sm text-gray-600">${info.count} trips</div>
+                        </div>
+                    </div>
+                `).join('');
+            
+            // Create and show modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-800">${data.location}</h3>
+                                <p class="text-lg text-gray-600">${data.site}</p>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">📋 Plate Numbers & Trip Counts</h4>
+                        <div class="space-y-3 mb-6">
+                            ${plateDetails}
+                        </div>
+                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-200">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-bold text-gray-700">SITE TOTAL:</span>
+                                <span class="text-2xl font-bold text-purple-600">₱${data.total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">${data.count} total trips • ${Object.keys(plateCounts).length} different plates</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                
+                // If all fields are filled, add the dispatch record
+                if (selectedPlates.length > 0 && selectedLocation && selectedSite && dispatchDateInput.value) {
+                    addDispatchRecord();
+                    return;
+                }
+                
+                // Auto-select first matching plate if search has results
+                const searchTerm = document.getElementById('plateSearch').value.toUpperCase();
+                if (searchTerm && selectedPlates.length === 0) {
+                    const denjoMatches = denjoPlates.filter(plate => 
+                        plate.toUpperCase().includes(searchTerm)
+                    );
+                    const subconMatches = subconPlates.filter(plate => 
+                        plate.toUpperCase().includes(searchTerm)
+                    );
+                    
+                    let firstMatch = null;
+                    if (denjoMatches.length > 0 && subconMatches.length === 0) {
+                        firstMatch = denjoMatches[0];
+                    } else if (subconMatches.length > 0 && denjoMatches.length === 0) {
+                        firstMatch = subconMatches[0];
+                    } else if (denjoMatches.length > 0 || subconMatches.length > 0) {
+                        firstMatch = [...denjoMatches, ...subconMatches].sort()[0];
+                    }
+                    
+                    if (firstMatch) {
+                        togglePlateSelection(firstMatch);
+                    }
+                }
+            }
+        }
+
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ed6bd4c272de84',t:'MTc1NzgyNzA4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ed8eafa045fc92',t:'MTc1NzgyODUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
