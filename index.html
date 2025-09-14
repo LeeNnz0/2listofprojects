@@ -445,6 +445,12 @@
         // Event listeners
         addDispatchBtn.addEventListener('click', addDispatchRecord);
         addMultiDispatchBtn.addEventListener('click', addMultiDispatchRecord);
+        
+        // Add date change listener to update button state
+        dispatchDateInput.addEventListener('change', function() {
+            console.log('Date changed to:', this.value);
+            updateRate();
+        });
 
         // Load saved data when page loads
         loadData();
@@ -727,9 +733,27 @@
         }
 
         function updateRate() {
-            if (!selectedLocation || Object.keys(selectedPlates).length === 0) {
+            // Always check all required fields first
+            const hasPlates = Object.keys(selectedPlates).length > 0;
+            const hasLocation = selectedLocation && selectedLocation.trim() !== '';
+            const hasSite = selectedSite && selectedSite.trim() !== '';
+            const hasDate = dispatchDateInput.value && dispatchDateInput.value.trim() !== '';
+            
+            console.log('UpdateRate Debug - Field Check:', {
+                hasPlates: hasPlates,
+                platesCount: Object.keys(selectedPlates).length,
+                hasLocation: hasLocation,
+                selectedLocation: selectedLocation,
+                hasSite: hasSite,
+                selectedSite: selectedSite,
+                hasDate: hasDate,
+                dateValue: dispatchDateInput.value
+            });
+
+            if (!hasLocation || !hasPlates) {
                 currentRateDiv.textContent = '₱0.00';
                 addDispatchBtn.disabled = true;
+                console.log('UpdateRate: Disabled - Missing location or plates');
                 return;
             }
 
@@ -760,30 +784,42 @@
             
             currentRateDiv.textContent = `₱${totalRate.toLocaleString('en-PH', {minimumFractionDigits: 2})} (${breakdownText})`;
             
-            // Enable add button if all fields are filled
-            const allFieldsFilled = Object.keys(selectedPlates).length > 0 && selectedLocation && selectedSite && dispatchDateInput.value;
+            // Enable add button ONLY if ALL fields are properly filled
+            const allFieldsFilled = hasPlates && hasLocation && hasSite && hasDate;
             addDispatchBtn.disabled = !allFieldsFilled;
             
-            console.log('Update Rate Debug:', {
-                selectedPlates: selectedPlates,
-                selectedLocation: selectedLocation,
-                selectedSite: selectedSite,
-                dateValue: dispatchDateInput.value,
+            console.log('UpdateRate Final:', {
                 allFieldsFilled: allFieldsFilled,
-                buttonDisabled: addDispatchBtn.disabled
+                buttonDisabled: addDispatchBtn.disabled,
+                totalRate: totalRate
             });
         }
 
         function addDispatchRecord() {
-            console.log('Add Dispatch Debug:', {
+            // Double-check all fields before proceeding
+            const hasPlates = Object.keys(selectedPlates).length > 0;
+            const hasLocation = selectedLocation && selectedLocation.trim() !== '';
+            const hasSite = selectedSite && selectedSite.trim() !== '';
+            const hasDate = dispatchDateInput.value && dispatchDateInput.value.trim() !== '';
+            
+            console.log('Add Dispatch Debug - Final Check:', {
+                hasPlates: hasPlates,
                 selectedPlates: selectedPlates,
+                hasLocation: hasLocation,
                 selectedLocation: selectedLocation,
+                hasSite: hasSite,
                 selectedSite: selectedSite,
-                dateValue: dispatchDateInput.value
+                hasDate: hasDate,
+                dateValue: dispatchDateInput.value,
+                buttonDisabled: addDispatchBtn.disabled
             });
             
-            if (Object.keys(selectedPlates).length === 0 || !selectedLocation || !selectedSite || !dispatchDateInput.value) {
-                alert('Please fill in all fields before adding dispatch record.');
+            if (!hasPlates || !hasLocation || !hasSite || !hasDate) {
+                alert('Please fill in all fields before adding dispatch record.\n\n' +
+                      `Plates: ${hasPlates ? '✓' : '✗'}\n` +
+                      `Location: ${hasLocation ? '✓' : '✗'}\n` +
+                      `Site: ${hasSite ? '✓' : '✗'}\n` +
+                      `Date: ${hasDate ? '✓' : '✗'}`);
                 return;
             }
             
@@ -1705,5 +1741,5 @@
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee80be200efebf',t:'MTc1NzgzODQyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ee8c36b7d1b42b',t:'MTc1NzgzODg5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
