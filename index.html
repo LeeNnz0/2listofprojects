@@ -16,12 +16,18 @@
                 <!-- Truck Type Selection -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-3">Select Truck Type</label>
-                    <div class="flex gap-3">
-                        <button id="denjoBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectTruckType('denjo')">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button id="denjoBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectTruckType('denjo')">
                             🚛 Denjo Trucks
                         </button>
-                        <button id="subconBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectTruckType('subcon')">
+                        <button id="denjoDumpBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectTruckType('denjo_dump')">
+                            🚛 Denjo Dump Trucks
+                        </button>
+                        <button id="subconBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectTruckType('subcon')">
                             🚚 Subcon Trucks
+                        </button>
+                        <button id="subconDumpBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectTruckType('subcon_dump')">
+                            🚚 Subcon Dump Trucks
                         </button>
                     </div>
                 </div>
@@ -110,7 +116,9 @@
                         <select id="customPlateType" class="p-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm">
                             <option value="">Select Type</option>
                             <option value="denjo">🚛 Denjo Truck</option>
+                            <option value="denjo_dump">🚛 Denjo Dump Truck</option>
                             <option value="subcon">🚚 Subcon Truck</option>
+                            <option value="subcon_dump">🚚 Subcon Dump Truck</option>
                         </select>
                         <button onclick="addCustomPlate()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-sm">
                             ➕ Add
@@ -131,12 +139,18 @@
                 <!-- Multi Truck Type Selection -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-3">Select Truck Type</label>
-                    <div class="flex gap-3">
-                        <button id="multiDenjoBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('denjo')">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button id="multiDenjoBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('denjo')">
                             🚛 Denjo Trucks
                         </button>
-                        <button id="multiSubconBtn" class="flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('subcon')">
+                        <button id="multiDenjoDumpBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('denjo_dump')">
+                            🚛 Denjo Dump Trucks
+                        </button>
+                        <button id="multiSubconBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('subcon')">
                             🚚 Subcon Trucks
+                        </button>
+                        <button id="multiSubconDumpBtn" class="p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold" onclick="selectMultiTruckType('subcon_dump')">
+                            🚚 Subcon Dump Trucks
                         </button>
                     </div>
                 </div>
@@ -248,11 +262,15 @@
 
         // Custom plates storage
         let customDenjoPlates = [];
+        let customDenjoDumpPlates = [];
         let customSubconPlates = [];
+        let customSubconDumpPlates = [];
 
         // Combined plates arrays (base + custom)
         let denjoPlates = [];
+        let denjoDumpPlates = [];
         let subconPlates = [];
+        let subconDumpPlates = [];
 
         const denjoRates = {
             'ALABANG': 3928.57,
@@ -292,6 +310,46 @@
             'PASAY': 1700,
             'PASIG': 1700,
             'QC': 2000
+        };
+
+        const denjoDumpRates = {
+            'ALABANG': 5500,
+            'BGC/TAGUIG': 4800,
+            'BICUTAN': 5200,
+            'CALOOCAN': 5700,
+            'CUBAO': 5500,
+            'FTI/ARCA SOUTH': 4000,
+            'LAS PINAS': 5500,
+            'MAKATI': 4700,
+            'MALABON': 5700,
+            'MANDALUYONG': 5100,
+            'MANILA': 5600,
+            'MUNTINLUPA': 5500,
+            'PARANAQUE': 5400,
+            'PASAY': 5500,
+            'PASIG': 5200,
+            'QC': 5500,
+            'SUCAT': 5300,
+            'VALENZUELA': 6700
+        };
+
+        const subconDumpRates = {
+            'ALABANG': 2800,
+            'ARCA SOUTH/FTI': 2200,
+            'FTI/ARCA SOUTH': 2200,
+            'ASEANA': 2600,
+            'BBG': 2200,
+            'BGC/TAGUIG': 2200,
+            'CAVITE': 3200,
+            'FAIRVIEW': 2800,
+            'MAKATI': 2400,
+            'MANDALUYONG': 2600,
+            'MANILA': 2800,
+            'NUVALI': 3200,
+            'PARANAQUE': 2600,
+            'PASAY': 2400,
+            'PASIG': 2400,
+            'QC': 2800
         };
 
         const locationSites = {
@@ -472,16 +530,28 @@
         function loadCustomPlates() {
             try {
                 const savedDenjoPlates = localStorage.getItem('customDenjoPlates');
+                const savedDenjoDumpPlates = localStorage.getItem('customDenjoDumpPlates');
                 const savedSubconPlates = localStorage.getItem('customSubconPlates');
+                const savedSubconDumpPlates = localStorage.getItem('customSubconDumpPlates');
                 
                 if (savedDenjoPlates) {
                     customDenjoPlates = JSON.parse(savedDenjoPlates);
                     console.log('✅ Loaded', customDenjoPlates.length, 'custom Denjo plates');
                 }
                 
+                if (savedDenjoDumpPlates) {
+                    customDenjoDumpPlates = JSON.parse(savedDenjoDumpPlates);
+                    console.log('✅ Loaded', customDenjoDumpPlates.length, 'custom Denjo Dump plates');
+                }
+                
                 if (savedSubconPlates) {
                     customSubconPlates = JSON.parse(savedSubconPlates);
                     console.log('✅ Loaded', customSubconPlates.length, 'custom Subcon plates');
+                }
+                
+                if (savedSubconDumpPlates) {
+                    customSubconDumpPlates = JSON.parse(savedSubconDumpPlates);
+                    console.log('✅ Loaded', customSubconDumpPlates.length, 'custom Subcon Dump plates');
                 }
                 
                 // Update combined arrays
@@ -490,7 +560,9 @@
             } catch (error) {
                 console.error('❌ Error loading custom plates:', error);
                 customDenjoPlates = [];
+                customDenjoDumpPlates = [];
                 customSubconPlates = [];
+                customSubconDumpPlates = [];
                 updatePlateArrays();
             }
         }
@@ -498,15 +570,19 @@
         // Update combined plate arrays
         function updatePlateArrays() {
             denjoPlates = [...baseDenjoPlates, ...customDenjoPlates].sort();
+            denjoDumpPlates = [...customDenjoDumpPlates].sort(); // Only custom plates for now
             subconPlates = [...baseSubconPlates, ...customSubconPlates].sort();
-            console.log('📋 Updated plate arrays - Denjo:', denjoPlates.length, 'Subcon:', subconPlates.length);
+            subconDumpPlates = [...customSubconDumpPlates].sort(); // Only custom plates for now
+            console.log('📋 Updated plate arrays - Denjo:', denjoPlates.length, 'Denjo Dump:', denjoDumpPlates.length, 'Subcon:', subconPlates.length, 'Subcon Dump:', subconDumpPlates.length);
         }
 
         // Save custom plates to localStorage
         function saveCustomPlates() {
             try {
                 localStorage.setItem('customDenjoPlates', JSON.stringify(customDenjoPlates));
+                localStorage.setItem('customDenjoDumpPlates', JSON.stringify(customDenjoDumpPlates));
                 localStorage.setItem('customSubconPlates', JSON.stringify(customSubconPlates));
+                localStorage.setItem('customSubconDumpPlates', JSON.stringify(customSubconDumpPlates));
                 console.log('✅ Custom plates saved successfully');
             } catch (error) {
                 console.error('❌ Error saving custom plates:', error);
@@ -529,12 +605,13 @@
             }
             
             if (!plateType) {
-                showErrorMessage('Please select truck type (Denjo or Subcon)');
+                showErrorMessage('Please select truck type');
                 return;
             }
             
             // Check if plate already exists in any list
-            if (denjoPlates.includes(plateNumber) || subconPlates.includes(plateNumber)) {
+            if (denjoPlates.includes(plateNumber) || denjoDumpPlates.includes(plateNumber) || 
+                subconPlates.includes(plateNumber) || subconDumpPlates.includes(plateNumber)) {
                 showErrorMessage(`Plate "${plateNumber}" already exists in the system`);
                 return;
             }
@@ -543,9 +620,15 @@
             if (plateType === 'denjo') {
                 customDenjoPlates.push(plateNumber);
                 showSuccessMessage(`Added "${plateNumber}" to Denjo trucks! 🚛`);
-            } else {
+            } else if (plateType === 'denjo_dump') {
+                customDenjoDumpPlates.push(plateNumber);
+                showSuccessMessage(`Added "${plateNumber}" to Denjo Dump trucks! 🚛`);
+            } else if (plateType === 'subcon') {
                 customSubconPlates.push(plateNumber);
                 showSuccessMessage(`Added "${plateNumber}" to Subcon trucks! 🚚`);
+            } else if (plateType === 'subcon_dump') {
+                customSubconDumpPlates.push(plateNumber);
+                showSuccessMessage(`Added "${plateNumber}" to Subcon Dump trucks! 🚚`);
             }
             
             // Update arrays and save
@@ -707,30 +790,45 @@
             
             // Update button styles
             document.getElementById('denjoBtn').className = type === 'denjo' ? 
-                'flex-1 p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
-                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+                'p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            
+            document.getElementById('denjoDumpBtn').className = type === 'denjo_dump' ? 
+                'p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
             
             document.getElementById('subconBtn').className = type === 'subcon' ? 
-                'flex-1 p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
-                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+                'p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
-            // Show location section and populate ALL locations (both Denjo and Subcon)
+            document.getElementById('subconDumpBtn').className = type === 'subcon_dump' ? 
+                'p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            
+            // Show location section and populate ALL locations
             const locationSection = document.getElementById('locationSection');
             const locationButtons = document.getElementById('locationButtons');
             locationSection.classList.remove('hidden');
             
-            // Combine ALL locations from both Denjo and Subcon rates
-            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(subconRates)]);
+            // Get rates based on truck type
+            let rates;
+            if (type === 'denjo') rates = denjoRates;
+            else if (type === 'denjo_dump') rates = denjoDumpRates;
+            else if (type === 'subcon') rates = subconRates;
+            else if (type === 'subcon_dump') rates = subconDumpRates;
+            else rates = {};
+            
+            // Combine ALL locations from all rate types
+            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(denjoDumpRates), ...Object.keys(subconRates), ...Object.keys(subconDumpRates)]);
             const sortedLocations = Array.from(allLocations).sort();
             
             locationButtons.innerHTML = sortedLocations.map(location => {
                 // Check if this location has rates for the selected truck type
-                const rates = type === 'denjo' ? denjoRates : subconRates;
                 const hasRate = rates[location] !== undefined;
                 const buttonClass = hasRate ? 
                     'p-3 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium' :
                     'p-3 border border-red-300 bg-red-50 rounded-lg text-sm font-medium text-red-600 cursor-not-allowed opacity-60';
-                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase()})`;
+                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase().replace('_', ' ')})`;
                 const onClickAction = hasRate ? `onclick="selectLocation('${location}')"` : '';
                 
                 return `<button class="${buttonClass}" ${onClickAction}>${buttonText}</button>`;
@@ -746,7 +844,17 @@
 
         function renderPlateButtons(filteredPlates = null) {
             const plateButtons = document.getElementById('plateButtons');
-            const plates = filteredPlates || (selectedTruckType === 'denjo' ? denjoPlates : subconPlates);
+            let plates;
+            
+            if (filteredPlates) {
+                plates = filteredPlates;
+            } else {
+                if (selectedTruckType === 'denjo') plates = denjoPlates;
+                else if (selectedTruckType === 'denjo_dump') plates = denjoDumpPlates;
+                else if (selectedTruckType === 'subcon') plates = subconPlates;
+                else if (selectedTruckType === 'subcon_dump') plates = subconDumpPlates;
+                else plates = [];
+            }
             
             if (plates.length === 0) {
                 plateButtons.innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">No plates found matching your search</div>';
@@ -758,22 +866,39 @@
             ).join('');
         }
 
-        function renderMixedPlateButtons(denjoMatches, subconMatches) {
+        function renderMixedPlateButtons(denjoMatches, denjoDumpMatches, subconMatches, subconDumpMatches) {
             const plateButtons = document.getElementById('plateButtons');
             
             // Combine and sort all matches
-            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            const allMatches = [...denjoMatches, ...denjoDumpMatches, ...subconMatches, ...subconDumpMatches].sort();
             
             plateButtons.innerHTML = allMatches.map(plate => {
-                const isDenjo = denjoMatches.includes(plate);
-                const truckTypeColor = isDenjo ? 'blue' : 'green';
-                const truckTypeLabel = isDenjo ? 'D' : 'S';
-                const isSelected = selectedPlates.includes(plate);
+                let truckType, truckTypeColor, truckTypeLabel;
                 
-                return `<button class="${isSelected ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : `p-2 border border-gray-300 rounded-lg hover:border-${truckTypeColor}-500 hover:bg-${truckTypeColor}-50 transition-colors text-sm font-medium`}" onclick="selectPlateWithType('${plate}', '${isDenjo ? 'denjo' : 'subcon'}')">
+                if (denjoMatches.includes(plate)) {
+                    truckType = 'denjo';
+                    truckTypeColor = 'blue';
+                    truckTypeLabel = 'D';
+                } else if (denjoDumpMatches.includes(plate)) {
+                    truckType = 'denjo_dump';
+                    truckTypeColor = 'blue';
+                    truckTypeLabel = 'DD';
+                } else if (subconMatches.includes(plate)) {
+                    truckType = 'subcon';
+                    truckTypeColor = 'green';
+                    truckTypeLabel = 'S';
+                } else if (subconDumpMatches.includes(plate)) {
+                    truckType = 'subcon_dump';
+                    truckTypeColor = 'green';
+                    truckTypeLabel = 'SD';
+                }
+                
+                const isSelected = selectedPlates[plate];
+                
+                return `<button class="${isSelected ? 'p-2 border-2 border-green-500 bg-green-50 rounded-lg text-sm font-medium text-green-700' : `p-2 border border-gray-300 rounded-lg hover:border-${truckTypeColor}-500 hover:bg-${truckTypeColor}-50 transition-colors text-sm font-medium`}" onclick="selectPlateWithType('${plate}', '${truckType}')">
                     <div class="flex items-center justify-between">
                         <span>${plate}${selectedPlates[plate] ? ` (${selectedPlates[plate]})` : ''}</span>
-                        <span class="ml-1 px-1 py-0.5 text-xs rounded ${isDenjo ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${truckTypeLabel}</span>
+                        <span class="ml-1 px-1 py-0.5 text-xs rounded ${truckTypeColor === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${truckTypeLabel}</span>
                     </div>
                 </button>`;
             }).join('');
@@ -796,7 +921,7 @@
             }
             
             // Enhanced search - multiple search methods for better accuracy
-            const denjoMatches = denjoPlates.filter(plate => {
+            const searchFilter = (plate) => {
                 const plateUpper = plate.toUpperCase().trim();
                 const plateNoSpaces = plateUpper.replace(/\s+/g, '');
                 const searchNoSpaces = searchTerm.replace(/\s+/g, '');
@@ -810,29 +935,20 @@
                     plateUpper.endsWith(searchTerm) ||                   // Ends with search term
                     plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
                 );
-            });
+            };
             
-            const subconMatches = subconPlates.filter(plate => {
-                const plateUpper = plate.toUpperCase().trim();
-                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
-                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
-                
-                return (
-                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
-                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
-                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
-                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
-                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
-                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
-                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
-                );
-            });
+            const denjoMatches = denjoPlates.filter(searchFilter);
+            const denjoDumpMatches = denjoDumpPlates.filter(searchFilter);
+            const subconMatches = subconPlates.filter(searchFilter);
+            const subconDumpMatches = subconDumpPlates.filter(searchFilter);
             
             console.log('Denjo matches:', denjoMatches);
+            console.log('Denjo Dump matches:', denjoDumpMatches);
             console.log('Subcon matches:', subconMatches);
+            console.log('Subcon Dump matches:', subconDumpMatches);
             
             // Combine all matches and show them
-            const allMatches = [...denjoMatches, ...subconMatches].sort();
+            const allMatches = [...denjoMatches, ...denjoDumpMatches, ...subconMatches, ...subconDumpMatches].sort();
             
             if (allMatches.length === 0) {
                 // No matches found - show helpful message
@@ -844,22 +960,40 @@
                 return;
             }
             
+            // Count matches by type
+            const matchCounts = [
+                denjoMatches.length > 0 ? 1 : 0,
+                denjoDumpMatches.length > 0 ? 1 : 0,
+                subconMatches.length > 0 ? 1 : 0,
+                subconDumpMatches.length > 0 ? 1 : 0
+            ].reduce((a, b) => a + b, 0);
+            
             // Auto-detect and set truck type if only one type has matches
-            if (denjoMatches.length > 0 && subconMatches.length === 0) {
-                // Only Denjo matches found
-                if (selectedTruckType !== 'denjo') {
-                    selectTruckType('denjo', true); // true indicates auto-detection
+            if (matchCounts === 1) {
+                if (denjoMatches.length > 0) {
+                    if (selectedTruckType !== 'denjo') {
+                        selectTruckType('denjo', true); // true indicates auto-detection
+                    }
+                    renderPlateButtons(denjoMatches);
+                } else if (denjoDumpMatches.length > 0) {
+                    if (selectedTruckType !== 'denjo_dump') {
+                        selectTruckType('denjo_dump', true);
+                    }
+                    renderPlateButtons(denjoDumpMatches);
+                } else if (subconMatches.length > 0) {
+                    if (selectedTruckType !== 'subcon') {
+                        selectTruckType('subcon', true);
+                    }
+                    renderPlateButtons(subconMatches);
+                } else if (subconDumpMatches.length > 0) {
+                    if (selectedTruckType !== 'subcon_dump') {
+                        selectTruckType('subcon_dump', true);
+                    }
+                    renderPlateButtons(subconDumpMatches);
                 }
-                renderPlateButtons(denjoMatches);
-            } else if (subconMatches.length > 0 && denjoMatches.length === 0) {
-                // Only Subcon matches found
-                if (selectedTruckType !== 'subcon') {
-                    selectTruckType('subcon', true); // true indicates auto-detection
-                }
-                renderPlateButtons(subconMatches);
             } else {
-                // Both types have matches - show all with type indicators
-                renderMixedPlateButtons(denjoMatches, subconMatches);
+                // Multiple types have matches - show all with type indicators
+                renderMixedPlateButtons(denjoMatches, denjoDumpMatches, subconMatches, subconDumpMatches);
             }
         }
 
@@ -1072,8 +1206,24 @@
             let invalidPlates = [];
             
             Object.entries(selectedPlates).forEach(([plate, quantity]) => {
-                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                let truckType, rates;
+                if (denjoPlates.includes(plate)) {
+                    truckType = 'denjo';
+                    rates = denjoRates;
+                } else if (denjoDumpPlates.includes(plate)) {
+                    truckType = 'denjo_dump';
+                    rates = denjoDumpRates;
+                } else if (subconPlates.includes(plate)) {
+                    truckType = 'subcon';
+                    rates = subconRates;
+                } else if (subconDumpPlates.includes(plate)) {
+                    truckType = 'subcon_dump';
+                    rates = subconDumpRates;
+                } else {
+                    // Default fallback - shouldn't happen but just in case
+                    truckType = 'unknown';
+                    rates = {};
+                }
                 const rate = rates[selectedLocation];
                 
                 if (!rate || rate <= 0) {
@@ -1179,8 +1329,22 @@
                 // Create records for each selected plate based on quantity
                 Object.entries(selectedPlates).forEach(([plate, quantity]) => {
                     // Auto-detect truck type based on plate registration
-                    const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                    const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                    let truckType, rates;
+                    if (denjoPlates.includes(plate)) {
+                        truckType = 'denjo';
+                        rates = denjoRates;
+                    } else if (denjoDumpPlates.includes(plate)) {
+                        truckType = 'denjo_dump';
+                        rates = denjoDumpRates;
+                    } else if (subconPlates.includes(plate)) {
+                        truckType = 'subcon';
+                        rates = subconRates;
+                    } else if (subconDumpPlates.includes(plate)) {
+                        truckType = 'subcon_dump';
+                        rates = subconDumpRates;
+                    } else {
+                        throw new Error(`Plate "${plate}" not found in any truck type list`);
+                    }
                     const rate = rates[selectedLocation];
                     
                     // Enhanced rate validation with better error messages
@@ -1235,8 +1399,10 @@
             selectedSite = '';
             
             // Reset truck type buttons
-            document.getElementById('denjoBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
-            document.getElementById('subconBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            document.getElementById('denjoBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            document.getElementById('denjoDumpBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            document.getElementById('subconBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            document.getElementById('subconDumpBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
             // Clear search input
             document.getElementById('plateSearch').value = '';
@@ -1617,12 +1783,20 @@
             
             // Update button styles
             document.getElementById('multiDenjoBtn').className = type === 'denjo' ? 
-                'flex-1 p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
-                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+                'p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            
+            document.getElementById('multiDenjoDumpBtn').className = type === 'denjo_dump' ? 
+                'p-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-center font-semibold text-blue-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
             
             document.getElementById('multiSubconBtn').className = type === 'subcon' ? 
-                'flex-1 p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
-                'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+                'p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            
+            document.getElementById('multiSubconDumpBtn').className = type === 'subcon_dump' ? 
+                'p-4 border-2 border-green-500 bg-green-50 rounded-lg text-center font-semibold text-green-700' :
+                'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
             // Show plate section
             document.getElementById('multiPlateSection').classList.remove('hidden');
@@ -1633,18 +1807,25 @@
             const locationButtons = document.getElementById('multiLocationButtons');
             locationSection.classList.remove('hidden');
             
-            // Combine ALL locations from both Denjo and Subcon rates
-            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(subconRates)]);
+            // Get rates based on truck type
+            let rates;
+            if (type === 'denjo') rates = denjoRates;
+            else if (type === 'denjo_dump') rates = denjoDumpRates;
+            else if (type === 'subcon') rates = subconRates;
+            else if (type === 'subcon_dump') rates = subconDumpRates;
+            else rates = {};
+            
+            // Combine ALL locations from all rate types
+            const allLocations = new Set([...Object.keys(denjoRates), ...Object.keys(denjoDumpRates), ...Object.keys(subconRates), ...Object.keys(subconDumpRates)]);
             const sortedLocations = Array.from(allLocations).sort();
             
             locationButtons.innerHTML = sortedLocations.map(location => {
                 // Check if this location has rates for the selected truck type
-                const rates = type === 'denjo' ? denjoRates : subconRates;
                 const hasRate = rates[location] !== undefined;
                 const buttonClass = hasRate ? 
                     'p-3 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors text-sm font-medium' :
                     'p-3 border border-red-300 bg-red-50 rounded-lg text-sm font-medium text-red-600 cursor-not-allowed opacity-60';
-                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase()})`;
+                const buttonText = hasRate ? location : `${location} (No rate for ${type.toUpperCase().replace('_', ' ')})`;
                 const onClickAction = hasRate ? `onclick="selectMultiLocation('${location}')"` : '';
                 
                 return `<button class="${buttonClass}" ${onClickAction}>${buttonText}</button>`;
@@ -1658,7 +1839,16 @@
 
         function renderMultiPlateButtons(filteredPlates = null) {
             const plateButtons = document.getElementById('multiPlateButtons');
-            const plates = filteredPlates || (multiSelectedTruckType === 'denjo' ? denjoPlates : subconPlates);
+            let plates;
+            if (filteredPlates) {
+                plates = filteredPlates;
+            } else {
+                if (multiSelectedTruckType === 'denjo') plates = denjoPlates;
+                else if (multiSelectedTruckType === 'denjo_dump') plates = denjoDumpPlates;
+                else if (multiSelectedTruckType === 'subcon') plates = subconPlates;
+                else if (multiSelectedTruckType === 'subcon_dump') plates = subconDumpPlates;
+                else plates = [];
+            }
             
             if (plates.length === 0) {
                 plateButtons.innerHTML = '<div class="col-span-full text-center text-gray-500 py-4">No plates found matching your search</div>';
@@ -1707,7 +1897,7 @@
             }
             
             // Enhanced search - multiple search methods for better accuracy
-            const denjoMatches = denjoPlates.filter(plate => {
+            const searchFilter = (plate) => {
                 const plateUpper = plate.toUpperCase().trim();
                 const plateNoSpaces = plateUpper.replace(/\s+/g, '');
                 const searchNoSpaces = searchTerm.replace(/\s+/g, '');
@@ -1721,23 +1911,12 @@
                     plateUpper.endsWith(searchTerm) ||                   // Ends with search term
                     plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
                 );
-            });
+            };
             
-            const subconMatches = subconPlates.filter(plate => {
-                const plateUpper = plate.toUpperCase().trim();
-                const plateNoSpaces = plateUpper.replace(/\s+/g, '');
-                const searchNoSpaces = searchTerm.replace(/\s+/g, '');
-                
-                return (
-                    plateUpper.includes(searchTerm) ||                    // Contains search term exactly
-                    plateUpper.startsWith(searchTerm) ||                 // Starts with search term
-                    plateNoSpaces.includes(searchNoSpaces) ||            // Remove spaces and search
-                    plateUpper.split(' ').some(part => part.includes(searchTerm)) || // Any part contains search term
-                    plateUpper.split(' ').some(part => part.startsWith(searchTerm)) || // Any part starts with search term
-                    plateUpper.endsWith(searchTerm) ||                   // Ends with search term
-                    plateNoSpaces.endsWith(searchNoSpaces)               // Ends with search term (no spaces)
-                );
-            });
+            const denjoMatches = denjoPlates.filter(searchFilter);
+            const denjoDumpMatches = denjoDumpPlates.filter(searchFilter);
+            const subconMatches = subconPlates.filter(searchFilter);
+            const subconDumpMatches = subconDumpPlates.filter(searchFilter);
             
             console.log('Multi Denjo matches:', denjoMatches);
             console.log('Multi Subcon matches:', subconMatches);
@@ -2069,8 +2248,23 @@
             
             multiSelectedPlates.forEach(plate => {
                 // Auto-detect truck type for each plate
-                const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                let truckType, rates;
+                if (denjoPlates.includes(plate)) {
+                    truckType = 'denjo';
+                    rates = denjoRates;
+                } else if (denjoDumpPlates.includes(plate)) {
+                    truckType = 'denjo_dump';
+                    rates = denjoDumpRates;
+                } else if (subconPlates.includes(plate)) {
+                    truckType = 'subcon';
+                    rates = subconRates;
+                } else if (subconDumpPlates.includes(plate)) {
+                    truckType = 'subcon_dump';
+                    rates = subconDumpRates;
+                } else {
+                    truckType = 'unknown';
+                    rates = {};
+                }
                 
                 Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
                     const locationRate = rates[location];
@@ -2116,8 +2310,22 @@
                 // Create a record for each combination of plate and site (across all locations)
                 multiSelectedPlates.forEach(plate => {
                     // Auto-detect truck type based on plate registration
-                    const truckType = denjoPlates.includes(plate) ? 'denjo' : 'subcon';
-                    const rates = truckType === 'denjo' ? denjoRates : subconRates;
+                    let truckType, rates;
+                    if (denjoPlates.includes(plate)) {
+                        truckType = 'denjo';
+                        rates = denjoRates;
+                    } else if (denjoDumpPlates.includes(plate)) {
+                        truckType = 'denjo_dump';
+                        rates = denjoDumpRates;
+                    } else if (subconPlates.includes(plate)) {
+                        truckType = 'subcon';
+                        rates = subconRates;
+                    } else if (subconDumpPlates.includes(plate)) {
+                        truckType = 'subcon_dump';
+                        rates = subconDumpRates;
+                    } else {
+                        throw new Error(`Plate "${plate}" not found in any truck type list`);
+                    }
                     
                     Object.entries(multiSitesByLocation).forEach(([location, sites]) => {
                         const rate = rates[location];
@@ -2169,8 +2377,10 @@
             multiSitesByLocation = {};
             
             // Reset truck type buttons
-            document.getElementById('multiDenjoBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
-            document.getElementById('multiSubconBtn').className = 'flex-1 p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            document.getElementById('multiDenjoBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            document.getElementById('multiDenjoDumpBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-blue-500 transition-colors text-center font-semibold';
+            document.getElementById('multiSubconBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
+            document.getElementById('multiSubconDumpBtn').className = 'p-4 border-2 border-gray-300 rounded-lg hover:border-green-500 transition-colors text-center font-semibold';
             
             // Clear search input
             document.getElementById('multiPlateSearch').value = '';
@@ -2539,5 +2749,5 @@
         // Initialize
         updateRate();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97ef174c4549b42b',t:'MTc1Nzg0NDU4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97efdfeed72e03ab',t:'MTc1Nzg1MjgwNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
